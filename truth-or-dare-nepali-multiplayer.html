@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Truth or Dare: Lie Detector — Multiplayer</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --c-bg:#03070f;--c-blue:#00f0ff;--c-green:#00ff9d;--c-red:#ff1f4b;
+  --c-yellow:#ffe033;--c-purple:#c944ff;--c-orange:#ff7c3a;
+  --c-glass:rgba(10,25,50,0.72);--brd:1px solid rgba(0,240,255,0.14);
+  --brd-r:1px solid rgba(255,31,75,0.25);--brd-g:1px solid rgba(0,255,157,0.2);
+  --glow-b:0 0 18px rgba(0,240,255,.55),0 0 55px rgba(0,240,255,.18);
+  --glow-g:0 0 18px rgba(0,255,157,.55),0 0 55px rgba(0,255,157,.18);
+  --glow-r:0 0 18px rgba(255,31,75,.6),0 0 55px rgba(255,31,75,.2);
+  --glow-y:0 0 18px rgba(255,224,51,.5),0 0 40px rgba(255,224,51,.15);
+  --font-hd:'Orbitron',monospace;--font-bd:'Rajdhani',sans-serif;
+  --rad:16px;--rad-lg:24px;--rad-sm:10px;--trans:all .25s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--c-bg);
+  font-family:var(--font-bd);color:#ddf0ff;touch-action:manipulation;position:fixed}
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.orb{position:fixed;border-radius:50%;filter:blur(90px);opacity:.1;z-index:1;pointer-events:none;transition:background 2s}
+.orb1{width:500px;height:500px;background:var(--c-blue);top:-120px;left:-120px;animation:orbf 7s ease-in-out infinite alternate}
+.orb2{width:420px;height:420px;background:var(--c-green);bottom:-80px;right:-80px;animation:orbf 9s ease-in-out infinite alternate-reverse}
+.orb3{width:350px;height:350px;background:var(--c-purple);top:35%;left:35%;animation:orbf 11s ease-in-out infinite alternate}
+@keyframes orbf{from{opacity:.07;transform:scale(1)}to{opacity:.17;transform:scale(1.15)}}
+.screen{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;opacity:0;pointer-events:none;transition:opacity .55s ease;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,16px)}
+.screen.active{opacity:1;pointer-events:all}
+/* INTRO */
+#s-intro{justify-content:center;background:radial-gradient(ellipse at 50% 40%,#0b1e3a,#020509 70%)}
+.intro-wrap{text-align:center;z-index:2}
+.intro-by{font-family:var(--font-bd);font-size:clamp(.8rem,2.8vw,1.1rem);letter-spacing:.5em;text-transform:uppercase;color:rgba(0,240,255,.4);margin-bottom:1.2rem;animation:fuA .9s .5s both}
+.intro-name{font-family:var(--font-hd);font-size:clamp(2rem,7vw,4rem);font-weight:900;color:var(--c-blue);text-shadow:var(--glow-b),0 0 120px rgba(0,240,255,.35);letter-spacing:.06em;animation:fuA .9s .8s both,nFlick 5s 2.5s infinite;line-height:1.15}
+.intro-sub{font-size:clamp(.65rem,2vw,.85rem);letter-spacing:.55em;text-transform:uppercase;color:rgba(0,240,255,.3);margin-top:1rem;animation:fuA .9s 1.1s both}
+.intro-divider{width:180px;height:1px;margin:1.4rem auto;background:linear-gradient(90deg,transparent,var(--c-blue),transparent);box-shadow:0 0 8px var(--c-blue);animation:divE 1.1s 1.4s both}
+.intro-dots{display:flex;gap:8px;justify-content:center;margin-top:1.5rem;animation:fuA .9s 1.7s both}
+.intro-dot{width:9px;height:9px;border-radius:50%;background:var(--c-blue);box-shadow:0 0 10px var(--c-blue);animation:dBnc 1.3s ease-in-out infinite}
+.intro-dot:nth-child(2){animation-delay:.22s}.intro-dot:nth-child(3){animation-delay:.44s}
+/* LAYOUT */
+.page-wrap{width:100%;max-width:480px;padding:1.5rem 1.2rem 2.5rem;display:flex;flex-direction:column;align-items:center;gap:1rem}
+.logo-hd{font-family:var(--font-hd);font-size:clamp(1.4rem,5vw,2.4rem);font-weight:900;text-align:center;line-height:1.2}
+.logo-hd .t{color:var(--c-blue);text-shadow:var(--glow-b)}.logo-hd .d{color:var(--c-red);text-shadow:var(--glow-r)}
+.logo-sub{font-size:.75rem;letter-spacing:.4em;text-transform:uppercase;color:rgba(0,240,255,.35);text-align:center;margin-top:-.3rem}
+.gc{background:var(--c-glass);border:var(--brd);border-radius:var(--rad-lg);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);padding:1.6rem;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(0,240,255,.08)}
+.gc-title{font-family:var(--font-hd);font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:var(--c-blue);margin-bottom:1rem;display:flex;align-items:center;gap:.6rem}
+.gc-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(0,240,255,.3),transparent)}
+.n-input-row{display:flex;gap:.6rem}
+.n-input{flex:1;background:rgba(0,240,255,.04);border:1px solid rgba(0,240,255,.18);border-radius:var(--rad-sm);padding:.9rem 1rem;font-family:var(--font-bd);font-size:1rem;font-weight:500;color:#ddf0ff;outline:none;transition:var(--trans);letter-spacing:.04em;min-width:0}
+.n-input::placeholder{color:rgba(0,240,255,.2)}
+.n-input:focus{border-color:var(--c-blue);box-shadow:0 0 0 3px rgba(0,240,255,.1),var(--glow-b);background:rgba(0,240,255,.07)}
+.players-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.8rem}
+.player-item{display:flex;align-items:center;gap:.7rem;background:rgba(0,240,255,.04);border:var(--brd);border-radius:var(--rad-sm);padding:.65rem 1rem;animation:fuA .4s both}
+.player-color{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.player-item-name{flex:1;font-size:.95rem;font-weight:600;letter-spacing:.04em}
+.player-item-edit{background:none;border:1px solid rgba(0,240,255,.15);border-radius:6px;padding:.25rem .55rem;font-size:.65rem;color:rgba(0,240,255,.5);cursor:pointer;font-family:var(--font-hd);letter-spacing:.1em;transition:var(--trans)}
+.player-item-edit:hover{border-color:var(--c-blue);color:var(--c-blue)}
+.player-item-del{background:none;border:1px solid rgba(255,31,75,.15);border-radius:6px;padding:.25rem .55rem;font-size:.75rem;color:rgba(255,31,75,.4);cursor:pointer;transition:var(--trans)}
+.player-item-del:hover{border-color:var(--c-red);color:var(--c-red)}
+.player-count-badge{font-family:var(--font-hd);font-size:.55rem;letter-spacing:.15em;color:rgba(255,255,255,.25);margin-top:.6rem;text-align:center}
+/* BUTTONS */
+.btn{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:1.05rem 1.2rem;border:none;border-radius:var(--rad);font-family:var(--font-hd);font-size:clamp(.72rem,2.5vw,.88rem);font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:var(--trans);position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.07);opacity:0;border-radius:inherit;transition:opacity .2s}
+.btn:active::after{opacity:1}.btn:active{transform:scale(.965)}.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.btn-b{background:linear-gradient(135deg,rgba(0,240,255,.16),rgba(0,100,255,.1));border:1px solid rgba(0,240,255,.45);color:var(--c-blue);box-shadow:var(--glow-b)}
+.btn-b:hover{box-shadow:0 0 35px rgba(0,240,255,.9),0 0 90px rgba(0,240,255,.3);transform:translateY(-2px)}
+.btn-g{background:linear-gradient(135deg,rgba(0,255,157,.16),rgba(0,200,100,.1));border:var(--brd-g);color:var(--c-green);box-shadow:var(--glow-g)}
+.btn-g:hover{box-shadow:0 0 35px rgba(0,255,157,.9),0 0 90px rgba(0,255,157,.3);transform:translateY(-2px)}
+.btn-r{background:linear-gradient(135deg,rgba(255,31,75,.16),rgba(180,0,80,.1));border:var(--brd-r);color:var(--c-red);box-shadow:var(--glow-r)}
+.btn-r:hover{box-shadow:0 0 35px rgba(255,31,75,.9);transform:translateY(-2px)}
+.btn-y{background:linear-gradient(135deg,rgba(255,224,51,.16),rgba(200,150,0,.1));border:1px solid rgba(255,224,51,.45);color:var(--c-yellow);box-shadow:var(--glow-y)}
+.btn-y:hover{box-shadow:0 0 35px rgba(255,224,51,.9);transform:translateY(-2px)}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.35)}
+.btn-ghost:hover{border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.6)}
+.btn-sm{padding:.55rem 1rem;font-size:.62rem;width:auto;border-radius:var(--rad-sm)}
+.btn-row{display:flex;gap:.65rem;width:100%}.btn-row .btn{flex:1}
+/* WHEEL SCREEN */
+#s-wheel{padding-top:max(1rem,env(safe-area-inset-top,8px))}
+.wheel-screen-wrap{width:100%;max-width:500px;padding:1rem 1.2rem 2rem;display:flex;flex-direction:column;align-items:center;gap:.9rem}
+.round-banner{font-family:var(--font-hd);font-size:.58rem;letter-spacing:.3em;color:rgba(0,240,255,.4);text-transform:uppercase;text-align:center}
+.wheel-outer-wrap{position:relative;width:100%;display:flex;justify-content:center;align-items:center;padding:1rem 0}
+#wheel-canvas{border-radius:50%;box-shadow:0 0 40px rgba(0,240,255,.2),0 0 80px rgba(0,240,255,.08);cursor:pointer;max-width:min(76vw,320px);aspect-ratio:1}
+.wheel-pointer{position:absolute;top:calc(50% - min(38vw,160px) - 12px);left:50%;transform:translateX(-50%);width:0;height:0;z-index:3;border-left:10px solid transparent;border-right:10px solid transparent;border-top:22px solid var(--c-yellow);filter:drop-shadow(0 0 8px var(--c-yellow))}
+.wheel-spin-label{font-family:var(--font-hd);font-size:.6rem;letter-spacing:.2em;color:rgba(255,255,255,.25);text-transform:uppercase;margin-top:-.3rem}
+.scoreboard-mini{width:100%;display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center}
+.sb-chip{background:rgba(0,240,255,.05);border:var(--brd);border-radius:30px;padding:.3rem .8rem;display:flex;align-items:center;gap:.45rem;font-size:.8rem;font-weight:600;letter-spacing:.04em}
+.sb-chip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sb-chip-score{font-family:var(--font-hd);font-size:.6rem;color:var(--c-blue);text-shadow:var(--glow-b)}
+/* TRUTH/DARE SCREENS */
+#s-truth,#s-dare,#s-detector{padding-top:max(1rem,env(safe-area-inset-top,8px))}
+.truth-wrap,.dare-wrap,.det-wrap{width:100%;max-width:480px;padding:1rem 1.2rem 2rem;display:flex;flex-direction:column;align-items:center;gap:1rem}
+.curr-player-tag{display:flex;align-items:center;gap:.6rem;background:rgba(0,240,255,.06);border:var(--brd);border-radius:30px;padding:.4rem 1.1rem;font-family:var(--font-hd);font-size:.6rem;letter-spacing:.12em;color:var(--c-blue);text-transform:uppercase}
+.curr-player-dot{width:9px;height:9px;border-radius:50%}
+.mode-label{font-family:var(--font-hd);font-size:.58rem;letter-spacing:.3em;text-transform:uppercase;text-align:center;display:flex;align-items:center;gap:.7rem;width:100%}
+.mode-label::before,.mode-label::after{content:'';flex:1;height:1px}
+.mode-label.ml-b{color:var(--c-blue)}.mode-label.ml-b::before,.mode-label.ml-b::after{background:linear-gradient(90deg,transparent,rgba(0,240,255,.3))}
+.mode-label.ml-r{color:var(--c-red)}.mode-label.ml-r::before,.mode-label.ml-r::after{background:linear-gradient(90deg,transparent,rgba(255,31,75,.3))}
+/* CARD */
+.q-card,.d-card{width:100%;background:var(--c-glass);border-radius:var(--rad-lg);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);padding:1.8rem;position:relative;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.q-card{border:var(--brd)}.q-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--c-blue),transparent)}
+.d-card{border:var(--brd-r)}.d-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--c-red),transparent)}
+.q-num{font-family:var(--font-hd);font-size:.55rem;letter-spacing:.2em;color:var(--c-blue);margin-bottom:.9rem;opacity:.6}
+.q-text,.d-text{font-family:var(--font-bd);font-size:clamp(1rem,3.5vw,1.3rem);font-weight:500;line-height:1.7;letter-spacing:.02em}
+.q-text{color:#e4f2ff}.d-text{color:#ffe4e4}
+.d-label{font-family:var(--font-hd);font-size:.55rem;letter-spacing:.2em;color:var(--c-red);margin-bottom:.35rem;opacity:.65}
+.d-cat{display:inline-block;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:.18rem .65rem;border-radius:20px;margin-bottom:.9rem;border:1px solid}
+.d-cat.funny{color:var(--c-yellow);border-color:rgba(255,224,51,.3);background:rgba(255,224,51,.07)}
+.d-cat.lalaj{color:var(--c-red);border-color:rgba(255,31,75,.3);background:rgba(255,31,75,.07)}
+.d-cat.samajik{color:var(--c-blue);border-color:rgba(0,240,255,.3);background:rgba(0,240,255,.07)}
+.d-cat.thappad{color:var(--c-orange);border-color:rgba(255,124,58,.3);background:rgba(255,124,58,.07)}
+.d-cat.creative{color:var(--c-purple);border-color:rgba(201,68,255,.3);background:rgba(201,68,255,.07)}
+.d-cat.challenge{color:var(--c-green);border-color:rgba(0,255,157,.3);background:rgba(0,255,157,.07)}
+/* camera */
+#cam-preview-wrap{position:fixed;top:max(1rem,env(safe-area-inset-top,12px));right:1rem;z-index:200;width:90px;height:90px;border-radius:50%;overflow:hidden;border:2px solid rgba(0,240,255,.4);box-shadow:var(--glow-b);display:none;background:#000;transition:var(--trans)}
+#cam-preview-wrap.active{display:block}
+#cam-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.cam-scan-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--c-blue);animation:camRing 1.5s ease-in-out infinite;opacity:0}
+@keyframes camRing{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.4);opacity:0}}
+/* DETECTOR */
+.det-card{width:100%;background:linear-gradient(135deg,rgba(3,12,28,.95),rgba(8,18,40,.9));border:var(--brd);border-radius:var(--rad-lg);padding:1.8rem;box-shadow:0 0 60px rgba(0,240,255,.1),0 8px 40px rgba(0,0,0,.6);position:relative;overflow:hidden;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+.det-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,transparent,var(--c-blue),var(--c-green),transparent);animation:scanLn 2s linear infinite}
+@keyframes scanLn{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
+.det-title{font-family:var(--font-hd);font-size:clamp(.95rem,3vw,1.25rem);font-weight:700;text-align:center;color:var(--c-blue);text-shadow:var(--glow-b);margin-bottom:.25rem;letter-spacing:.14em}
+.det-sub{font-size:.65rem;letter-spacing:.25em;text-transform:uppercase;color:rgba(0,240,255,.35);text-align:center;margin-bottom:1.4rem}
+.ecg-wrap{width:100%;height:72px;background:rgba(0,0,0,.4);border-radius:10px;border:1px solid rgba(0,255,157,.12);overflow:hidden;margin-bottom:1.2rem;position:relative}
+#ecg-canvas{width:100%;height:100%}
+.sb-wrap{width:100%;height:7px;background:rgba(0,0,0,.4);border-radius:4px;overflow:hidden;margin-bottom:1.2rem;border:1px solid rgba(0,240,255,.1)}
+.sb-fill{height:100%;width:0;background:linear-gradient(90deg,var(--c-blue),var(--c-green));border-radius:4px;box-shadow:0 0 10px var(--c-blue);transition:width .1s linear}
+.sb-fill.go{animation:sbGo 3s ease-in-out forwards}
+@keyframes sbGo{0%{width:0}55%{width:72%}82%{width:89%}100%{width:100%}}
+.det-steps{margin-bottom:1.2rem}
+.det-step{display:flex;align-items:center;gap:.75rem;padding:.5rem 0;font-size:.83rem;color:rgba(255,255,255,.25);transition:all .4s ease;font-weight:500;letter-spacing:.04em}
+.det-step.on{color:var(--c-green);text-shadow:0 0 10px var(--c-green)}.det-step.done{color:rgba(0,255,157,.4)}
+.ds-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.1);flex-shrink:0;transition:all .4s ease}
+.det-step.on .ds-dot{background:var(--c-green);box-shadow:0 0 10px var(--c-green);animation:dsPulse .8s infinite}
+.det-step.done .ds-dot{background:rgba(0,255,157,.35)}
+@keyframes dsPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.6)}}
+.det-result{text-align:center;padding:1.3rem;border-radius:14px;margin-bottom:1rem;display:none;animation:resReveal .55s cubic-bezier(.34,1.56,.64,1) forwards}
+.det-result.truth{background:rgba(0,255,157,.07);border:var(--brd-g);box-shadow:0 0 35px rgba(0,255,157,.12)}
+.det-result.lie{background:rgba(255,31,75,.07);border:var(--brd-r);box-shadow:0 0 35px rgba(255,31,75,.12);animation:resReveal .55s cubic-bezier(.34,1.56,.64,1) forwards,lieShk .5s ease .5s}
+@keyframes resReveal{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+@keyframes lieShk{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.res-icon{font-size:2.8rem;margin-bottom:.4rem}
+.res-text{font-family:var(--font-hd);font-size:clamp(1.1rem,3.5vw,1.5rem);font-weight:900;letter-spacing:.1em}
+.det-result.truth .res-text{color:var(--c-green);text-shadow:var(--glow-g)}
+.det-result.lie .res-text{color:var(--c-red);text-shadow:var(--glow-r)}
+.res-conf{font-size:.72rem;color:rgba(255,255,255,.35);margin-top:.35rem;letter-spacing:.1em}
+.lie-alert{width:100%;background:linear-gradient(135deg,rgba(255,31,75,.18),rgba(180,0,60,.1));border:var(--brd-r);border-radius:14px;padding:.9rem 1.1rem;display:none;align-items:center;gap:.75rem;box-shadow:0 0 20px rgba(255,31,75,.18);animation:alertPls 2s ease-in-out infinite}
+.lie-alert.show{display:flex}
+@keyframes alertPls{0%,100%{box-shadow:0 0 18px rgba(255,31,75,.18)}50%{box-shadow:0 0 40px rgba(255,31,75,.38)}}
+.la-icon{font-size:1.4rem}.la-text{font-size:.88rem;font-weight:700;color:var(--c-red);letter-spacing:.04em}
+/* VOTING */
+.vote-panel{width:100%;background:var(--c-glass);border:var(--brd);border-radius:var(--rad-lg);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);padding:1.4rem}
+.vp-title{font-family:var(--font-hd);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(0,240,255,.5);margin-bottom:1rem;text-align:center}
+.vote-buttons{display:flex;gap:.7rem}
+.vote-players{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.8rem;justify-content:center}
+.vp-chip{padding:.3rem .75rem;border-radius:20px;font-size:.78rem;font-weight:600;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.3);transition:var(--trans);cursor:pointer;display:flex;align-items:center;gap:.35rem;font-family:var(--font-bd);letter-spacing:.03em}
+.vp-chip.yes{background:rgba(0,255,157,.12);border-color:rgba(0,255,157,.4);color:var(--c-green)}
+.vp-chip.no{background:rgba(255,31,75,.1);border-color:rgba(255,31,75,.35);color:var(--c-red)}
+.vote-result-bar{width:100%;height:6px;background:rgba(255,255,255,.06);border-radius:3px;margin-top:.9rem;overflow:hidden}
+.vrb-fill{height:100%;border-radius:3px;transition:width .4s ease;background:linear-gradient(90deg,var(--c-green),var(--c-blue))}
+.vote-tally{font-family:var(--font-hd);font-size:.58rem;letter-spacing:.12em;color:rgba(255,255,255,.3);text-align:center;margin-top:.4rem}
+.custom-input-row{display:flex;gap:.6rem;margin-top:.7rem}
+/* HISTORY */
+.history-panel{width:100%;background:var(--c-glass);border:var(--brd);border-radius:var(--rad);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);padding:1.1rem 1.2rem}
+.hp-title{font-family:var(--font-hd);font-size:.57rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(0,240,255,.35);margin-bottom:.7rem}
+.h-item{display:flex;align-items:center;gap:.6rem;padding:.45rem 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.78rem;color:rgba(255,255,255,.35)}
+.h-item:last-child{border-bottom:none}
+.h-badge{font-family:var(--font-hd);font-size:.48rem;letter-spacing:.08em;padding:.18rem .5rem;border-radius:6px;flex-shrink:0}
+.h-badge.t{background:rgba(0,240,255,.1);color:var(--c-blue);border:1px solid rgba(0,240,255,.2)}
+.h-badge.d{background:rgba(255,31,75,.1);color:var(--c-red);border:1px solid rgba(255,31,75,.2)}
+.h-name{color:rgba(255,255,255,.6);font-weight:600;flex-shrink:0}
+.h-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* WINNER */
+#s-winner{justify-content:center;padding:1.5rem}
+.winner-wrap{width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:1.2rem;text-align:center}
+.winner-trophy{font-size:5rem;animation:trphBnc 1s cubic-bezier(.34,1.56,.64,1) both;filter:drop-shadow(0 0 30px rgba(255,224,51,.6))}
+@keyframes trphBnc{from{opacity:0;transform:scale(.3) translateY(-40px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.winner-title{font-family:var(--font-hd);font-size:clamp(1.8rem,6vw,3rem);font-weight:900;color:var(--c-yellow);text-shadow:var(--glow-y);letter-spacing:.07em;animation:fuA .7s .4s both}
+.winner-name{font-family:var(--font-hd);font-size:clamp(1.3rem,4.5vw,2rem);font-weight:700;color:#fff;animation:fuA .7s .6s both}
+.winner-score{font-family:var(--font-hd);font-size:1.1rem;color:var(--c-blue);text-shadow:var(--glow-b);letter-spacing:.1em;animation:fuA .7s .8s both}
+.leaderboard{width:100%;background:var(--c-glass);border:var(--brd);border-radius:var(--rad-lg);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);padding:1.4rem;animation:fuA .7s 1s both}
+.lb-row{display:flex;align-items:center;gap:.8rem;padding:.65rem 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.lb-row:last-child{border-bottom:none}
+.lb-rank{font-family:var(--font-hd);font-size:.7rem;font-weight:700;width:24px;text-align:center;flex-shrink:0}
+.lb-rank.r1{color:var(--c-yellow);text-shadow:var(--glow-y)}.lb-rank.r2{color:#c0c0c0}.lb-rank.r3{color:#cd7f32}
+.lb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.lb-name{flex:1;font-weight:600;font-size:.95rem;letter-spacing:.04em}
+.lb-pts{font-family:var(--font-hd);font-size:.72rem;color:var(--c-blue);text-shadow:var(--glow-b)}
+.lb-bar-wrap{width:100%;height:4px;background:rgba(255,255,255,.06);border-radius:2px;margin-top:.25rem;overflow:hidden}
+.lb-bar{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--c-blue),var(--c-green))}
+/* TOAST */
+#toast{position:fixed;bottom:max(2rem,env(safe-area-inset-bottom,20px));left:50%;transform:translateX(-50%) translateY(120px);background:var(--c-glass);border:var(--brd);border-radius:30px;padding:.75rem 1.4rem;font-family:var(--font-bd);font-size:.88rem;letter-spacing:.04em;color:var(--c-blue);box-shadow:var(--glow-b),0 8px 30px rgba(0,0,0,.5);z-index:999;transition:transform .45s cubic-bezier(.34,1.56,.64,1);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);white-space:nowrap;pointer-events:none;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+#toast.show{transform:translateX(-50%) translateY(0)}
+/* SAVED SCORES */
+.saved-scores-list{display:flex;flex-wrap:wrap;gap:.4rem}
+/* ANIMATIONS */
+@keyframes fuA{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes divE{from{width:0;opacity:0}to{width:180px;opacity:1}}
+@keyframes nFlick{0%,100%{opacity:1}91%{opacity:1}92%{opacity:.65}94%{opacity:1}97%{opacity:.8}98%{opacity:1}}
+@keyframes dBnc{0%,80%,100%{transform:scale(.6);opacity:.35}40%{transform:scale(1);opacity:1}}
+@keyframes rpl{from{transform:scale(0);opacity:1}to{transform:scale(2.5);opacity:0}}
+@keyframes cardIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.card-in{animation:cardIn .4s cubic-bezier(.34,1.2,.64,1) both}
+@media(max-height:680px){#wheel-canvas{max-width:min(62vw,260px)}.wheel-pointer{top:calc(50% - min(31vw,130px) - 12px)}}
+@media(max-width:360px){.btn{font-size:.65rem;padding:.85rem .8rem}}
+</style>
+</head>
+<body>
+<div class="orb orb1" id="orb1"></div>
+<div class="orb orb2" id="orb2"></div>
+<div class="orb orb3" id="orb3"></div>
+<canvas id="bg-canvas"></canvas>
+<div id="cam-preview-wrap"><video id="cam-video" autoplay muted playsinline></video><div class="cam-scan-ring"></div></div>
+<div id="toast"></div>
+
+<!-- INTRO -->
+<div class="screen active" id="s-intro">
+  <div class="intro-wrap">
+    <p class="intro-by">A Party Game By</p>
+    <h1 class="intro-name">Dipesh Kharel</h1>
+    <p class="intro-sub">Presents</p>
+    <div class="intro-divider"></div>
+    <div class="intro-dots"><div class="intro-dot"></div><div class="intro-dot"></div><div class="intro-dot"></div></div>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div class="screen" id="s-setup">
+  <div class="page-wrap">
+    <div class="logo-hd"><span class="t">TRUTH</span> <span style="color:rgba(255,255,255,.18)">OR</span> <span class="d">DARE</span></div>
+    <p class="logo-sub">Lie Detector · Multiplayer · नेपाली</p>
+    <div class="gc card-in" style="animation-delay:.1s">
+      <div class="gc-title">👥 खेलाडी थप्नुहोस् (२–१०)</div>
+      <div class="n-input-row">
+        <input id="inp-pname" class="n-input" type="text" placeholder="नाम लेख्नुहोस्..." maxlength="16" autocomplete="off">
+        <button class="btn btn-b btn-sm" onclick="addPlayer()" style="white-space:nowrap">+ Add</button>
+      </div>
+      <div id="players-list" class="players-list"></div>
+      <p class="player-count-badge" id="p-count-badge">0 / 10 players added</p>
+    </div>
+    <div class="gc card-in" id="saved-scores-card" style="display:none;animation-delay:.2s">
+      <div class="gc-title">⚡ अघिल्लो स्कोर</div>
+      <div id="saved-scores-list" class="saved-scores-list"></div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:.8rem;width:auto" onclick="clearSavedScores()">🗑 Clear</button>
+    </div>
+    <button class="btn btn-g card-in" style="animation-delay:.3s" id="start-btn" onclick="startGame()" disabled>⚡ खेल सुरु गर्नुहोस्</button>
+  </div>
+</div>
+
+<!-- WHEEL -->
+<div class="screen" id="s-wheel">
+  <div class="wheel-screen-wrap">
+    <p class="round-banner" id="round-banner">राउन्ड १</p>
+    <div class="scoreboard-mini" id="scoreboard-mini"></div>
+    <div class="wheel-outer-wrap">
+      <div class="wheel-pointer"></div>
+      <canvas id="wheel-canvas" onclick="spinWheel()"></canvas>
+    </div>
+    <p class="wheel-spin-label">Wheel थिच्नुहोस् — Spin!</p>
+    <div class="history-panel" id="history-panel" style="display:none">
+      <div class="hp-title">📜 अन्तिम ५ कार्य</div>
+      <div id="history-list"></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="showEndGame()">🏁 खेल समाप्त</button></div>
+  </div>
+</div>
+
+<!-- TRUTH -->
+<div class="screen" id="s-truth">
+  <div class="truth-wrap">
+    <div class="curr-player-tag"><div class="curr-player-dot" id="truth-player-dot"></div><span id="truth-player-name">Player</span></div>
+    <div class="mode-label ml-b" style="width:100%">🔍 सत्य प्रश्न</div>
+    <div class="q-card card-in">
+      <div class="q-num" id="q-num">प्रश्न #001</div>
+      <p class="q-text" id="q-text">लोड भइरहेको छ...</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-b" id="cam-toggle-btn" onclick="toggleCamera()">📷 Camera</button>
+      <button class="btn btn-y" onclick="startLieDetector()">⚡ Lie Detector</button>
+    </div>
+    <div class="vote-panel" id="custom-vote-panel">
+      <div class="vp-title">🗳 Custom प्रश्न? सबैले भोट गर्नुहोस्</div>
+      <div class="vote-buttons">
+        <button class="btn btn-g btn-sm" style="flex:1" onclick="castVote('custom-q','yes')">👍 हो</button>
+        <button class="btn btn-r btn-sm" style="flex:1" onclick="castVote('custom-q','no')">👎 होइन</button>
+      </div>
+      <div class="vote-players" id="custom-q-votes"></div>
+      <div class="vote-result-bar"><div class="vrb-fill" id="custom-q-bar" style="width:0%"></div></div>
+      <div class="vote-tally" id="custom-q-tally">0 / 0 ले हो भन्यो</div>
+      <div id="custom-q-input-row" style="display:none" class="custom-input-row">
+        <input id="inp-custom-q" class="n-input" type="text" placeholder="Custom प्रश्न लेख्नुहोस्..." style="font-size:.9rem">
+        <button class="btn btn-b btn-sm" onclick="applyCustomQuestion()">✓</button>
+      </div>
+    </div>
+    <button class="btn btn-ghost" onclick="goWheel()">← फिर्ता</button>
+  </div>
+</div>
+
+<!-- DETECTOR -->
+<div class="screen" id="s-detector">
+  <div class="det-wrap">
+    <div class="curr-player-tag"><div class="curr-player-dot" id="det-player-dot"></div><span id="det-player-name">Player</span></div>
+    <div class="det-card">
+      <div class="det-title">⚡ झूट पकड्ने यन्त्र</div>
+      <div class="det-sub">Neural Biometric Analysis v3.1</div>
+      <div class="ecg-wrap"><canvas id="ecg-canvas"></canvas></div>
+      <div class="sb-wrap"><div class="sb-fill" id="sb-fill"></div></div>
+      <div class="det-steps">
+        <div class="det-step" id="ds1"><div class="ds-dot"></div><span>आवाज विश्लेषण गर्दै...</span></div>
+        <div class="det-step" id="ds2"><div class="ds-dot"></div><span>अनुहार भाव जाँच गर्दै...</span></div>
+        <div class="det-step" id="ds3"><div class="ds-dot"></div><span>मुटुको धड्कन मापन गर्दै...</span></div>
+        <div class="det-step" id="ds4"><div class="ds-dot"></div><span>मस्तिष्क तरंग विश्लेषण...</span></div>
+        <div class="det-step" id="ds5"><div class="ds-dot"></div><span>झूटको सम्भावना गणना...</span></div>
+      </div>
+      <div class="det-result" id="det-result">
+        <div class="res-icon" id="res-icon">✅</div>
+        <div class="res-text" id="res-text">सत्य पत्ता लाग्यो</div>
+        <div class="res-conf" id="res-conf">निश्चितता: ९४.२%</div>
+      </div>
+    </div>
+    <div class="lie-alert" id="lie-alert"><div class="la-icon">🚨</div><div class="la-text">झूट पक्रायो! अब Dare गर्नुपर्छ!</div></div>
+    <button class="btn btn-b" id="det-next-btn" onclick="handleDetResult()" style="display:none">अगाडि बढ्नुहोस् →</button>
+    <p style="font-size:.65rem;color:rgba(255,255,255,.2);text-align:center;letter-spacing:.06em;max-width:340px">⚠ यो मनोरञ्जनको लागि मात्र simulation हो। कुनै वास्तविक डाटा संकलन गरिँदैन।</p>
+  </div>
+</div>
+
+<!-- DARE -->
+<div class="screen" id="s-dare">
+  <div class="dare-wrap">
+    <div class="curr-player-tag"><div class="curr-player-dot" id="dare-player-dot"></div><span id="dare-player-name">Player</span></div>
+    <div class="mode-label ml-r" style="width:100%">🔥 Dare चुनौती</div>
+    <div class="lie-alert" id="dare-lie-alert"><div class="la-icon">🚨</div><div class="la-text">झूट पक्रायो! Dare गर् — +३ points!</div></div>
+    <div class="d-card card-in">
+      <div class="d-label">DARE #<span id="dare-num">001</span></div>
+      <div class="d-cat" id="d-cat">मजेदार</div>
+      <p class="d-text" id="dare-text">लोड भइरहेको छ...</p>
+    </div>
+    <div class="vote-panel">
+      <div class="vp-title">✅ Dare सकियो? — सबैले भोट गर्नुहोस्</div>
+      <div class="vote-buttons">
+        <button class="btn btn-g btn-sm" style="flex:1" onclick="castVote('dare-complete','yes')">👍 हो</button>
+        <button class="btn btn-r btn-sm" style="flex:1" onclick="castVote('dare-complete','no')">👎 होइन</button>
+      </div>
+      <div class="vote-players" id="dare-complete-votes"></div>
+      <div class="vote-result-bar"><div class="vrb-fill" id="dare-complete-bar" style="width:0%"></div></div>
+      <div class="vote-tally" id="dare-complete-tally">0 / 0 ले हो भन्यो</div>
+    </div>
+    <div class="vote-panel" id="custom-dare-vote-panel">
+      <div class="vp-title">🎲 Custom Dare? — सबैले भोट गर्नुहोस्</div>
+      <div class="vote-buttons">
+        <button class="btn btn-g btn-sm" style="flex:1" onclick="castVote('custom-dare','yes')">👍 हो</button>
+        <button class="btn btn-r btn-sm" style="flex:1" onclick="castVote('custom-dare','no')">👎 होइन</button>
+      </div>
+      <div class="vote-players" id="custom-dare-votes"></div>
+      <div class="vote-result-bar"><div class="vrb-fill" id="custom-dare-bar" style="width:0%"></div></div>
+      <div class="vote-tally" id="custom-dare-tally">0 / 0 ले हो भन्यो</div>
+      <div id="custom-dare-input-row" style="display:none" class="custom-input-row">
+        <input id="inp-custom-dare" class="n-input" type="text" placeholder="Custom dare लेख्नुहोस्..." style="font-size:.9rem">
+        <button class="btn btn-r btn-sm" onclick="applyCustomDare()">✓</button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-g" onclick="completeDare()">🏆 Dare सकियो!</button>
+      <button class="btn btn-b" onclick="nextDare()">🎲 अर्को Dare</button>
+    </div>
+    <button class="btn btn-ghost" onclick="goWheel()">← Wheel मा फर्कनुहोस्</button>
+  </div>
+</div>
+
+<!-- WINNER -->
+<div class="screen" id="s-winner">
+  <div class="winner-wrap">
+    <div class="winner-trophy">🏆</div>
+    <div class="winner-title">विजेता!</div>
+    <div class="winner-name" id="winner-name">Player</div>
+    <div class="winner-score" id="winner-score">0 points</div>
+    <div class="leaderboard gc" id="leaderboard"></div>
+    <div class="btn-row">
+      <button class="btn btn-g" onclick="newGame()">🔄 नयाँ खेल</button>
+      <button class="btn btn-b" onclick="showWheel()">▶ जारी राख्नुहोस्</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================
+   PLAYER COLORS
+   ===================================================== */
+const PLAYER_COLORS=['#00f0ff','#00ff9d','#ff1f4b','#ffe033','#c944ff','#ff7c3a','#4affb4','#ff4af1','#4af0ff','#b4ff4a'];
+
+/* =====================================================
+   TRUTHS — नेपाली (500+, numbered internally)
+   ===================================================== */
+const TRUTHS_RAW = [
+/* 1-50: व्यक्तिगत/लज्जा */
+"तिमीले अहिलेसम्म गरेको सबैभन्दा लाजमर्दो काम के हो?",
+"तिमीले कहिले झूट बोलेर कुनै कामबाट टाढा भागेको छौ?",
+"तिमीले नुहाउन सबैभन्दा धेरै दिन छोडेको कति दिन हो?",
+"तिमीले आफ्नो गल्ती अरू कसैमाथि थोपरेको छौ?",
+"तिमीलाई बचपनको सबैभन्दा लाजलाग्दो सम्झना के छ?",
+"तिमीले बिरामी भएको बहाना बनाएर केही छोडेको छौ?",
+"तिमीले आमा-बाबुलाई सबैभन्दा ठूलो झूट के भनेका छौ?",
+"तिमीले कहिले अरूको मोबाइल message पढेको छौ बिना अनुमति?",
+"तिमीसँग कुनै लुकाएको ट्यालेन्ट छ जुन कसैलाई थाहा छैन?",
+"तिमीले कहिले परीक्षामा नक्कल गरेको छौ?",
+"तिमी अझै पनि बच्चाजस्तो गर्ने कुनै काम छ?",
+"तिमी कहिले गलत शौचालयमा पस्न पुगेका छौ?",
+"तिमीले यो हप्ता सबैभन्दा अनौठो कुरा Google मा खोजेको के हो?",
+"तिमीलाई कहिले आफ्नो साथीको boyfriend/girlfriend मन परेको थियो?",
+"तिमीले केही भाँचेर कसैलाई नभनेको छौ?",
+"तिमीले गलत मान्छेलाई message पठाएको छौ?",
+"यो कोठामा भएका मान्छेहरूको सबैभन्दा ठूलो कमजोरी के हो?",
+"तिमीले थाहा नभएको कुरा थाहा भएको नाटक गरेको छौ?",
+"तिमी सबैभन्दा सानो कुरामा रोएको कुन हो?",
+"तिमीले कहिले कसैको Social Media धेरै समय स्क्रोल गरेर हेरेका छौ?",
+"तिमीसँग कुनै लाजलाग्दो बानी छ जुन तिमी जान्दछौ?",
+"तिमीले सार्वजनिक ठाउँमा पाद छोडेर अरूलाई दोष दिएको छौ?",
+"तिमीले कसैको उपहार मन नपरेर पनि मन पर्‍यो भनेको छौ?",
+"तिमीले कसैको सामान लुकेर खोजेको छौ?",
+"तिम्रो सबैभन्दा अतार्किक डर के हो?",
+"तिमीले party बाट अगाडि नै जाने बहाना बनाएको छौ?",
+"तिमीले लुकेर सुन्ने सबैभन्दा लाजलाग्दो गाना के हो?",
+"तिमीले कसैको birthday बिर्सेर पनि याद छ भनेका छौ?",
+"तिमीले एकै हप्तामा एउटा show कतिपटक हेरेका छौ?",
+"तिमीले कसैलाई लड्दा देखेर हाँसेको छौ?",
+"तिमीले मन नपरेको खाना मन पर्छ भन्ने नाटक गरेको छौ?",
+"तिमीले कसैको निजी कुरा लुकेर सुनेको छौ?",
+"तिमीले सबैभन्दा बेकार काममा पैसा खर्च गरेको कति हो?",
+"तिमीले मन परेको मान्छेलाई Ghost गरेका छौ?",
+"तिमीले Dare मा गरेको सबैभन्दा मूर्खतापूर्ण काम के हो?",
+"तिमीले आफ्नो उमेर लुकाएको छौ?",
+"तिमीले सबैभन्दा लुकेर मन पर्‍याएको TV show के हो?",
+"तिमी भीड अगाडि ठोक्किएर पनि cool भनेको बहाना गरेका छौ?",
+"तिमीले नबुझेको कुरा बुझेको नाटक गरेका छौ?",
+"तिमीले साथी वा परिवारको खाना चोरेका छौ?",
+"तिम्रो अहिलेसम्मको सबैभन्दा अप्ठेरो date कस्तो थियो?",
+"तिमीले एकै लुगा धेरै दिन नधोई लगाएको छौ?",
+"तिमीलाई कसैको प्रशंसाले मन छोएन तर धन्यवाद भनेका छौ?",
+"तिमीले कसैसँग नाता राख्न नराम्रो situation मा बसेका छौ?",
+"तिम्रो आमा-बाबुले सबैभन्दा लाजलाग्दो काममा समातेका छन्?",
+"तिमीले Social Media को इतिहास मेटाएका छौ?",
+"तिमीले गलत कारणले ठूलो निर्णय गरेका छौ?",
+"तिमीले Autocorrect को दोष दिएर आफ्नो कुरा लुकाएका छौ?",
+"तिम्रो फोनको कुन app को इतिहास अरूले देख्नु हुँदैन?",
+"तिमीले काम गरेको नाटक गर्दा अरू काम गरेका छौ?",
+/* 51-100: साथी/सम्बन्ध */
+"यो कोठामा मन परेको मान्छेबारे सोचेको नराम्रो कुरा के हो?",
+"तिमीले कसैको गृहकार्य नक्कल गरेका छौ?",
+"तिमीले एक दिनमा junk food मा सबैभन्दा धेरै पैसा खर्च गरेको कति हो?",
+"तिमीले कसैको पुरानो post like गर्न गएर accidentally like गरेका छौ?",
+"एक्लै हुँदा तिमी के गर्छौ जुन सार्वजनिक ठाउँमा गर्दैनौ?",
+"तिमीले कहिले ओरालमा चिच्याएका छौ? किन?",
+"तिम्रो गल्तीले भएको सबैभन्दा ठूलो गलतफहमी के हो?",
+"तिमीले कसैलाई impress गर्न नजान्ने कुरा जान्ने देखाएका छौ?",
+"तिमीले दिएको सबैभन्दा मन नलागेको प्रशंसा के हो?",
+"तिमीले कुनै movie वा किताब नहेरेर/नपढेर पढेको/हेरेको भनेका छौ?",
+"तिमीले भुइँबाट खाना उठाएर खाएका छौ?",
+"तिम्रो सबैभन्दा लाजलाग्दो Autocorrect गल्ती के हो?",
+"तिमीले गलत नामले कसैलाई बारम्बार बोलाएका छौ?",
+"तिमीले अरूलाई दिने सल्लाह आफैले पालन गर्दैनौ?",
+"तिमीले फोन बन्द भएको बहाना बनाएर कसैको call छोडेका छौ?",
+"तिमीले आफैसँग सबैभन्दा अनौठो कुरामा कुराकानी गरेका छौ?",
+"तिमीले आफूलाई रोचक देखाउन कथा बनाएका छौ?",
+"तिम्रो अहिलेसम्मको सबैभन्दा लाजलाग्दो fashion choice के हो?",
+"तिमीले आफ्नो CV वा Social Media profile मा झूट लेखेका छौ?",
+"तिम्रो सबैभन्दा राम्रो साथीलाई नभनेको कुरा के छ?",
+"तिमीले अर्कोको idea चोरेर आफ्नो भनेका छौ?",
+"तिमीले प्रतिशोध लिन गरेको सबैभन्दा छोटो काम के हो?",
+"तिमीले धेरै पछुताउने खरिद के हो?",
+"तिमीले कसैलाई खुसी राख्न नमन लागेको काम गरेका छौ?",
+"तिमीले सानो कुरामा सबैभन्दा नाटकीय प्रतिक्रिया के गरेका छौ?",
+"तिमीले कसैको पिठ्यूँ पछाडि कुरा गरेर पछुताएका छौ?",
+"तिमीले जितेको सबैभन्दा मूर्ख तर्क के हो?",
+"तिमीले conversation बाट बच्न फोन मरेको बहाना गरेका छौ?",
+"तिमी लुकेर के चिजमा competitive छौ?",
+"कसैले नहेरेको भन्ठानेर तिमीले गरेको सबैभन्दा लाजलाग्दो काम के हो?",
+/* 101-150: स्कूल/साथीहरू */
+"गत हप्ता तिम्रो कुनै message हेर्दा मान्छे अचम्म पर्थे?",
+"तिमीले सानो कुरामा सबैभन्दा लामो समय रिस राखेको कति दिन हो?",
+"तिमीले कहिले mirror अगाडि उभिएर कुराकानी practice गरेका छौ?",
+"तिमीलाई सबैभन्दा धेरै मन पर्ने emoji के हो र यसले तिमीबारे के बताउँछ?",
+"तिमीले यो कोठामा भएका कसैलाई avoid गरेका छौ?",
+"तिम्रो फोनमा सबैभन्दा लाजलाग्दो photo कस्तो छ?",
+"तिमीले अरू रोचक देखिन story बनाएका छौ?",
+"तिम्रो अझै पनि राखेको सबैभन्दा लाजलाग्दो fashion item के हो?",
+"तिमीले जानाजान कसैको message ignore गरेका छौ?",
+"तिम्रो सबैभन्दा राम्रो साथीलाई कहिल्यै नभनेको कुरा के छ?",
+"तिमीले कसैको idea लिएर आफ्नो भनेका छौ?",
+"तिमी गोप्य रूपमा के चिजमा competitive छौ?",
+"तिमीले कसैलाई घरमा एक्लो छोडेर उनको सामान हेरेका छौ?",
+"तिमीले गहिरो पछुताउने purchase के हो?",
+"तिमीले कसैको approval को लागि नमन लागेको काम गरेका छौ?",
+"तिमीले आफ्नो खराब निर्णयको दोष कसमाथि थोपरेका छौ?",
+"तिमीले exam मा नक्कल गरेको सबैभन्दा मज्जाको incident के हो?",
+"तिम्रो class मा सबैभन्दा बढी टाइम खाने teacher को बारेमा सोच्दा के मन मा आउँछ?",
+"तिमीले school मा कहिले teacher लाई झूट बोलेका छौ?",
+"तिमीले साथीको notes बिना अनुमति लिएका छौ?",
+"तिमीले कसैको birthday party मा जान नचाहेर पनि गएका छौ?",
+"तिमीले कुनै साथीको रहस्य अरूलाई बताएका छौ?",
+"तिमीले group project मा सबैभन्दा कम काम गरेर पनि credit लिएका छौ?",
+"तिम्रो class मा सबैभन्दा boring कुन subject लाग्छ?",
+"तिमीले teacher को पिठ्यूँ पछाडि के गर्थ्यौ?",
+"तिम्रो school को सबैभन्दा अनौठो incident के हो?",
+"तिमीले कहिले school बाट भाग्न कोशिस गरेका छौ?",
+"तिमीले homeroom मा सुतेका छौ?",
+"तिमीले exam को दिन किताब नपढेर के गरेका थियौ?",
+"तिम्रो सबैभन्दा मन नपर्ने school rule के थियो?",
+/* 151-200: मनोरञ्जन/खाना/सपना */
+"तिम्रो सबैभन्दा अनौठो सपना के हो जुन याद छ?",
+"तिमीले कहिले खाना खाँदा table मनिषहरूमाझ लाजलाग्दो भएको छ?",
+"तिमीले सबैभन्दा मन नपर्ने खाना के हो तर मन पर्छ भनेको छौ?",
+"तिम्रो घरमा लुकेर खाने कुनै favorite खाना छ?",
+"तिमीले मध्यरातमा उठेर kitchen मा के खोज्न जान्थ्यौ?",
+"तिमीले बिरामी भनेर school छोडेर के गरेका थियौ?",
+"तिमीले कहिले बाथरूममा लुकेर के गरेका थियौ?",
+"तिम्रो phone मा कस्तो गाना छ जुन अरूलाई देखाउन लाज लाग्छ?",
+"तिमीले कहिले कसैको Instagram/TikTok घण्टौं स्क्रोल गरेका छौ?",
+"तिम्रो सबैभन्दा बेकार खर्च के हो यो महिना?",
+"तिमीले अन्तिमपटक कहिले आफ्नो room सफा गरेका थियौ?",
+"तिमीले आफ्नो साथीको gift मन नपरेर पनि wow भनेका छौ?",
+"तिमीले YouTube मा कुन video सबैभन्दा धेरैपटक हेरेका छौ?",
+"तिम्रो सबैभन्दा weird food combination के हो जुन तिमीलाई मन पर्छ?",
+"तिमीले कहिले रातभर जागेर के गरेका थियौ?",
+"तिमीले आफ्नो एउटा लाजलाग्दो habit सबैलाई बताउ।",
+"तिमीले कहिले mirror अगाडि dance गरेका छौ?",
+"तिमीले सबैभन्दा लामो समय phone मा बिताएको कति घण्टा हो?",
+"तिमीले कहिले आफ्नो पालतू जनावरसँग कुरा गरेका छौ?",
+"तिम्रो सबैभन्दा अचम्मको भय के हो?",
+"तिमीले कहिले movie हेर्दा एक्लै रोएका छौ?",
+"तिमीले YouTube Shorts/Reels मा सबैभन्दा बेकार कति समय खर्च गरेका छौ?",
+"तिम्रो सबैभन्दा मन पर्ने Cartoon character को हो?",
+"तिमीले कहिले आफ्ना कपडा बिना कारण उल्टो लगाएका छौ?",
+"तिमीले घरमा एक्लो हुँदा के गाउँछौ?",
+"तिमीले आफ्नो आवाज record गरेर कस्तो लाग्यो?",
+"तिमीले कहिले खाना खाँदा plate मा खसालेर अरूले नदेखून भनेर खाएका छौ?",
+"तिम्रो सबैभन्दा लाजलाग्दो Whatsapp status के थियो?",
+"तिमीले कहिले friend list मा नभएको मान्छेको profile हेरेका छौ?",
+"तिम्रो room मा सबैभन्दा अनौठो चिज के छ?",
+/* 201-250: साहस/रहस्य */
+"तिमीले सबैभन्दा ठूलो झूट कसलाई बोलेका छौ?",
+"तिमीले कहिले साथीसँग झगडा गरेर माफी नमागेका छौ?",
+"तिमीलाई कसले सबैभन्दा धेरै irritate गर्छ?",
+"तिमीले कसैको secret जान्ने भएर पनि लुकाएका छौ?",
+"तिमीले गरेको सबैभन्दा ठूलो risk के हो?",
+"तिमीले कसैसँग चाहेर पनि नभन्न सकेको कुरा के छ?",
+"यदि तिमीलाई एक दिनको लागि अर्कै मान्छे बन्न मिल्छ भने को बन्छौ?",
+"तिम्रो जीवनको सबैभन्दा ठूलो पछुतो के हो?",
+"तिमीले कसैलाई jealous बनाउन कुनै काम गरेका छौ?",
+"तिमीले आफूलाई मन नपर्ने मान्छेसँग राम्रो व्यवहार गरेका छौ?",
+"तिमीलाई सबैभन्दा पहिले याद हुने childhood memory के हो?",
+"तिमीले गल्ती गरेर माफी माग्न लाज मानेका छौ?",
+"तिम्रो जीवनको सबैभन्दा खुसीको दिन कुन हो?",
+"तिमीले कहिले अरूको success देखेर jealous भएका छौ?",
+"तिमीले आफ्नो साथीलाई धोका दिएका छौ? कसरी?",
+"तिमीलाई रातको सबैभन्दा धेरै के सोचाइले सुत्न दिँदैन?",
+"तिमीले कहिले सबभन्दा ठूलो आँट गरेका थियौ?",
+"तिम्रो सबैभन्दा खराब दिन कस्तो थियो?",
+"तिमीले कहिले कसैको आँसु देखेर तिमी पनि रोएका छौ?",
+"तिम्रो मनमा अहिले भएका यी सबैभन्दा नजिकको साथीबारे के छ?",
+"तिमीले कुनै सपना छोडेका छौ? कुन?",
+"तिमीले कसैको लागि मन मा चाहेर पनि केही गर्न नसकेको छौ?",
+"तिमीले अहिलेसम्म गरेको सबैभन्दा साहसी काम के हो?",
+"तिम्रो सबैभन्दा ठूलो डर के हो?",
+"तिमीले जिन्दगीमा सबैभन्दा बढी कसलाई miss गर्छौ?",
+/* 251-300: मजेदार/रोचक */
+"तिमीले कहिले अरूको गल्तीमा हाँसेर आफ्नो पेट समाएका छौ?",
+"तिमीलाई कसको नक्कल गर्न सबैभन्दा राम्रो आउँछ?",
+"तिमीले कहिले आफ्नो साथीलाई झट्का दिन plan गरेका छौ?",
+"तिमीले आफ्नो birthday मा सबैभन्दा अनौठो उपहार के पाएका थियौ?",
+"तिमीले अहिलेसम्म खाएको सबैभन्दा disgusting खाना के हो?",
+"तिमीले कहिले गाडी, bus वा cycle मा मजाको incident भएको छ?",
+"तिमीले कुनै game मा cheating गरेका छौ?",
+"तिम्रो सबैभन्दा weird habit कुन हो?",
+"तिमीले कहिले आफ्नो साथीको joke मा नहाँसेर force हाँस गरेका छौ?",
+"तिमीले कहिले आफूले नजानेको dance step गर्न कोशिस गरेका छौ?",
+"तिमीले सबैभन्दा अनौठो स्थानमा photo खिचेका छौ?",
+"तिमीले कुनै trend follow गर्न कोशिस गरेर totally fail भएका छौ?",
+"तिमीले आफ्नो मोबाइलमा अरूको लागि save गरेको weird ringtone के छ?",
+"तिमीले सबैभन्दा पहिले कुन superhero बन्ने सपना देखेका थियौ?",
+"तिमीले कहिले आफ्नो exam question paper हेरेर हाँसेका छौ?",
+"तिमी group photo मा आफूलाई कस्तो देख्छौ र के सोच्छौ?",
+"तिमीले सबैभन्दा लामो समय game खेलेको कति घण्टा हो?",
+"तिमीले कहिले karaoke गरेर साथीलाई दुःख दिएका छौ?",
+"तिमीले आफ्नो name google मा search गरेका छौ?",
+"तिमीले कहिले आफ्नो मित्रसँग bet गरेर हारेका छौ?",
+"तिमीले कहिले केही सिक्ने बहाना बनाएर YouTube मा time waste गरेका छौ?",
+"तिमीले आफ्नो face edit गरेर photo राखेका छौ?",
+"तिमीले कहिले आफ्नो साथीको केही लिएर फिर्ता नदिएका छौ?",
+"तिमीले अहिलेसम्म सबैभन्दा धेरैपटक हेरेको movie कुन हो?",
+"तिम्रो room मा लुकाएको सबैभन्दा अनौठो चिज के छ?",
+/* 301-350: किशोर अवस्था/साथी */
+"तिमीले कुनै crush लाई पहिलो पटक कुरा गर्दा के भएको थियो?",
+"तिमीले कहिले साथीको सामु गाउन बाध्य भएका छौ?",
+"तिम्रो सबैभन्दा नजिकको साथी र तिमीले मिलेर गरेको सबैभन्दा पागल काम के हो?",
+"तिमीले कहिले Valentine's Day मा केही गरेका छौ?",
+"तिमीले कुनै साथीको प्रेम कथा अरूलाई बताएका छौ?",
+"तिमीले कहिले साथीको लागि lie गरेका छौ?",
+"तिम्रो life मा सबैभन्दा अजीब phase कुन थियो?",
+"तिमीले कहिले साथीको नक्कल उतारेर हँसाएका छौ?",
+"तिमीले आफ्नो साथीसँग सबैभन्दा लामो time phone मा कुरा गरेको कति हो?",
+"तिम्रो best friend ले तिमीबारे के गुनासो गर्छ होला?",
+"तिमीले साथीसँग मिलेर कुनै prank plan गरेका छौ?",
+"तिमीले कहिले साथीको घरमा राति बसेका छौ? के भयो?",
+"तिमीले कुनै group chat मा गलत message पठाएका छौ?",
+"तिमीले कहिले साथीहरूसँग मिलेर कसैलाई surprise दिएका छौ?",
+"तिमीले कुनै साथीले तिमीमाथि trust गरेको secret तोडेका छौ?",
+"तिम्रो साथीको सबैभन्दा funny memory के हो?",
+"तिमीले साथीसँग मिलेर teacher लाई झट्का दिएका छौ?",
+"तिमीले कुनै साथीलाई कहिल्यै माफ नगरेको कुरा छ?",
+"तिमीले साथीको birthday party मा सबैभन्दा मज्जाको काम के गरेका थियौ?",
+"तिमीले कुनै competition मा जित्न साथीको मद्दत लिएका छौ?",
+/* 351-400: भविष्य/इच्छा */
+"यदि तिमीसँग एक दिनको लागि superpower हुन्थ्यो भने के गर्थ्यौ?",
+"तिम्रो जीवनको सबैभन्दा ठूलो सपना के हो?",
+"तिमी १० वर्षपछि कहाँ हुनेछौ भन्ने सोच्छौ?",
+"तिमीले कुनै profession छोड्न मन छ कि?",
+"तिमीले जिन्दगी फेरि सुरु गर्न पाएको भए के गर्थ्यौ?",
+"तिमीले कहिले आफ्नो future बारे रातभर सोचेका छौ?",
+"तिमीले आफ्नो सबैभन्दा ठूलो goal के भनेर परिवारलाई बताएका छौ?",
+"तिम्रो bucket list मा सबैभन्दा अनौठो कुरा के छ?",
+"तिमीले एउटा दिन सबै नियम तोड्न मिल्छ भने के गर्थ्यौ?",
+"तिमीले आफ्नो dream job पाउन के sacrifice गर्न सक्छौ?",
+"तिमी famous भएको भए के गर्थ्यौ?",
+"तिमीले भविष्यमा कुन देशमा बस्न मन लाग्छ?",
+"तिमीले आफ्नो children लाई के सिकाउन चाहन्छौ?",
+"तिमीले time machine पाएको भए कुन समयमा जान्थ्यौ?",
+"तिमीले आफ्नो life मा सबैभन्दा ठूलो achievement के भनेर सोच्छौ?",
+/* 401-450: मजेदार opinions */
+"यो कोठामा सबैभन्दा फोहर मान्छे को हो?",
+"यो कोठामा सबैभन्दा बढी खाने मान्छे को हो?",
+"यो कोठामा सबैभन्दा नाटकीय मान्छे को हो?",
+"यो कोठामा सबैभन्दा आलसी मान्छे को हो?",
+"यो कोठामा सबैभन्दा तेज बोल्ने मान्छे को हो?",
+"यो कोठामा सबैभन्दा बढी सुत्ने मान्छे को हो?",
+"यो कोठामा सबैभन्दा बढी सेल्फी लिने मान्छे को हो?",
+"यो कोठामा सबैभन्दा funny मान्छे को हो?",
+"यो कोठामा सबैभन्दा बढी झूट बोल्ने मान्छे को लाग्छ?",
+"यो कोठामा सबैभन्दा नर्भस देखिने मान्छे को हो?",
+"यो कोठामा सबैभन्दा बढी drama गर्ने मान्छे को हो?",
+"यो कोठामा सबैभन्दा राम्रो dancer को हो?",
+"यो कोठामा सबैभन्दा खराब singer को हो?",
+"यो कोठामा सबैभन्दा बढी phone हेर्ने मान्छे को हो?",
+"यो कोठामा सबैभन्दा बढी पसिना आउने काम गर्ने को हो?",
+/* 451-500: थप random */
+"तिमीले कहिले आफ्नो shadow देखेर डराएका छौ?",
+"तिमीले घरमा एक्लो भएर सबैभन्दा अनौठो काम के गरेका छौ?",
+"तिम्रो सबैभन्दा boring hobby कुन हो?",
+"तिमीले कहिले आफ्नो reflection लाई हेरेर अचम्म मानेका छौ?",
+"तिमीले कहिले आफ्नो voice record गरेर सुनेका छौ?",
+"तिमीले कहिले आफ्नो photo हेरेर रिस उठेका छौ?",
+"तिमीले एउटा दिन internet नभए के गर्थ्यौ?",
+"तिमीले कहिले कसैको secret diary पढेका छौ?",
+"तिमीले सबैभन्दा अनौठो place मा सुतेका छौ?",
+"तिम्रो अहिलेको mood र reason बताउ।",
+];
+
+/* =====================================================
+   DARES — नेपाली (500+, with {PLAYER} placeholder)
+   ===================================================== */
+const DARES_RAW = [
+/* ---- मजेदार (funny) ---- */
+{t:"{PLAYER} लाई David Attenborough को आवाजमा खाना खाँदाको commentary गर्नुहोस् ३० सेकेन्ड।",c:"funny"},
+{t:"अहिले भएको ठाउँलाई Museum भनेर मान्छेहरूलाई tour दिनुहोस् — serious अनुहारले।",c:"funny"},
+{t:"Cricket commentator को आवाजमा {PLAYER} ले पानी खाएको describe गर्नुहोस्।",c:"funny"},
+{t:"Robot जस्तो चलेर अर्को कोठासम्म जानुहोस् र फर्कनुहोस्।",c:"funny"},
+{t:"नेपाली समाचार anchor को style मा आजको मौसम सुनाउनुहोस्।",c:"funny"},
+{t:"आफ्नो नाम opera style मा ३ पटक गाउनुहोस्।",c:"funny"},
+{t:"अहिले गर्नुभएको सबै काम slow motion मा गर्नुहोस् ३ मिनेट।",c:"funny"},
+{t:"{PLAYER} लाई सबैभन्दा मजेदार nickname बनाएर ५ मिनेट त्यसैले बोलाउनुहोस्।",c:"funny"},
+{t:"आफ्नो मुख बन्द राखेर Laxmi Prasad Devkota को कविता सुनाउनुहोस्।",c:"funny"},
+{t:"Superhero जस्तो pose गरेर ३० सेकेन्ड नहल्लाउनुहोस्।",c:"funny"},
+{t:"सबैभन्दा नराम्रो Nepali dancing गरेर देखाउनुहोस् ३० सेकेन्ड।",c:"funny"},
+{t:"आफ्नो favourite खाना खाएको नाटक गर्नुहोस् — खाना नभई।",c:"funny"},
+{t:"Mirror अगाडि उभिएर आफूलाई motivational speech दिनुहोस् १ मिनेट।",c:"funny"},
+{t:"{PLAYER} को voice imitation गरेर कुरा गर्नुहोस् — next 2 rounds सम्म।",c:"funny"},
+{t:"TV remote को आवाज निकाल्दै अरूलाई control गर्ने नाटक गर्नुहोस्।",c:"funny"},
+{t:"आफ्नो खाना Masterchef जज को अगाडि present गरेजस्तो describe गर्नुहोस्।",c:"funny"},
+{t:"पानीको बोतल microphone बनाएर news anchor जस्तो breaking news सुनाउनुहोस्।",c:"funny"},
+{t:"सबैलाई एउटा random joke सुनाउनुहोस् — जे आउँछ त्यही।",c:"funny"},
+{t:"आफ्नो बायाँ हात प्रयोग नगरी phone मा आफ्नो नाम type गर्नुहोस्।",c:"funny"},
+{t:"कुनै Bollywood song को mukhda हाँस्दै हाँस्दै गाउनुहोस्।",c:"funny"},
+{t:"{PLAYER} लाई grandmother जस्तो गरेर treat गर्नुहोस् ३ मिनेट।",c:"funny"},
+{t:"आफ्नो जुत्ता खोलेर त्यसलाई phone झैं गरेर कुरा गर्नुहोस्।",c:"funny"},
+{t:"कोठामा भएको कुनै चिजलाई dancing partner बनाएर नाच्नुहोस्।",c:"funny"},
+{t:"सबैको सामु आफ्नो pet को नक्कल उतार्नुहोस् ३० सेकेन्ड।",c:"funny"},
+{t:"तपाईंको मोबाइलको last 3 search history सबैलाई पढेर सुनाउनुहोस्।",c:"funny"},
+{t:"आँखा बन्द गरेर {PLAYER} को अनुहार बनाउने कोशिस गर्नुहोस् हावामा।",c:"funny"},
+{t:"Cartoon character को आवाजमा आफ्नो परिचय दिनुहोस्।",c:"funny"},
+{t:"एक मिनेटसम्म जे कुरा आए पनि rhyme गरेर बोल्नुहोस्।",c:"funny"},
+{t:"सबैले मिलेर एउटा funny group pose गर्नुहोस् — photo खिच्नुहोस्।",c:"funny"},
+{t:"कुनै पनि Animal को sound सुनाएर अरूले guess गर्न लगाउनुहोस्।",c:"funny"},
+/* ---- लाजलाग्दो (lalaj) ---- */
+{t:"{PLAYER} लाई call गरेर 'मैले तिम्रो secret थाहा पाएँ' भन्नुहोस्।",c:"lalaj"},
+{t:"आफ्नो camera roll को last 3 photos सबैलाई देखाउनुहोस्।",c:"lalaj"},
+{t:"आफ्नो last sent WhatsApp message सबैलाई dramatic voice मा पढेर सुनाउनुहोस्।",c:"lalaj"},
+{t:"{PLAYER} को नाम Caller ID मा हेर्दैन उनलाई call गरेर एउटा गाना गाउनुहोस्।",c:"lalaj"},
+{t:"आफ्नो सबैभन्दा पुरानो social media photo सबैलाई देखाउनुहोस्।",c:"lalaj"},
+{t:"Status मा 'सबैलाई माया' भनेर post गर्नुहोस् — ३० मिनेट राख्नुहोस्।",c:"lalaj"},
+{t:"आफ्नो सबैभन्दा लाजलाग्दो memory सबैलाई एक मिनेटमा सुनाउनुहोस्।",c:"lalaj"},
+{t:"{PLAYER} लाई message गर्नुहोस्: 'हामीले कुरा गर्नु पर्छ' — reply हेर्नुहोस्।",c:"lalaj"},
+{t:"आफ्नो कुनै contact लाई 'मिस गरिरहेको छु' emoji मात्र पठाउनुहोस्।",c:"lalaj"},
+{t:"सबैको सामु आफ्नो नाम ३ पटक जोरले भन्नुहोस्।",c:"lalaj"},
+{t:"Group photo मा सबैभन्दा अनौठो face expression गर्नुहोस्।",c:"lalaj"},
+{t:"आफ्नो phone को Wallpaper सबैलाई एक minute देखाउनुहोस्।",c:"lalaj"},
+{t:"कुनै पनि मान्छेको contact मा weird nickname राखेको छ भने देखाउनुहोस्।",c:"lalaj"},
+{t:"{PLAYER} लाई 'तिमी मेरो hero हौ' भनेर serious अनुहारले भन्नुहोस्।",c:"lalaj"},
+{t:"आफ्नो last Google search सबैलाई सुनाउनुहोस्।",c:"lalaj"},
+{t:"आफ्नो childhood को एउटा embarrassing memory act out गर्नुहोस्।",c:"lalaj"},
+{t:"आफ्नो सबैभन्दा weird dream अर्कोलाई सुनाउनुहोस्।",c:"lalaj"},
+{t:"सबैको सामु आफ्नो phone को battery % र storage देखाउनुहोस्।",c:"lalaj"},
+{t:"कसैले आफ्नो Facebook/Instagram explore page हेर्न दिनुहोस् ३० seconds।",c:"lalaj"},
+{t:"{PLAYER} को हरेक काम copy गर्नुहोस् ३ मिनेट — shadow जस्तो।",c:"lalaj"},
+/* ---- सामाजिक (samajik) ---- */
+{t:"{PLAYER} लाई एउटा genuine compliment दिनुहोस् — सबैको सामु।",c:"samajik"},
+{t:"कोठाका सबैलाई एउटा funny nickname दिनुहोस्।",c:"samajik"},
+{t:"{PLAYER} को सबैभन्दा राम्रो गुण के हो भनेर सबैलाई बताउनुहोस्।",c:"samajik"},
+{t:"{PLAYER} लाई 'तिमी जित्नेछौ' भनेर motivational speech दिनुहोस्।",c:"samajik"},
+{t:"सबैसँग haiku बनाउनुहोस् — कोठामा भएको कुनै चिजबारे।",c:"samajik"},
+{t:"{PLAYER} लाई birthday wish गर्नुहोस् — जन्मदिन नभए पनि।",c:"samajik"},
+{t:"कोठामा भएका सबैको हात मिलाउनुहोस् र एउटा दयालु कुरा भन्नुहोस्।",c:"samajik"},
+{t:"{PLAYER} लाई coach भनेर ५ मिनेट उनको हरेक instruction मान्नुहोस्।",c:"samajik"},
+{t:"कोठामा भएका सबैसँग thumb wrestling खेल्नुहोस्।",c:"samajik"},
+{t:"{PLAYER} लाई आफ्नो hero भनेर सबैलाई बताउनुहोस्।",c:"samajik"},
+{t:"सबैलाई एकपटक high five दिनुहोस् र 'you're amazing' भन्नुहोस्।",c:"samajik"},
+{t:"{PLAYER} संग ३० सेकेन्डको staring contest खेल्नुहोस्।",c:"samajik"},
+{t:"कोठामा भएका ३ जनालाई एउटा genuine compliment दिनुहोस्।",c:"samajik"},
+{t:"सबैको नाम गाएर एउटा rap बनाउनुहोस्।",c:"samajik"},
+{t:"{PLAYER} लाई 'Nepal को best talent' भनेर introduce गर्नुहोस्।",c:"samajik"},
+/* ---- थप्पड/Physical fun (thappad) ---- */
+{t:"{PLAYER} को हत्केलामा gentle थप्पड हान्नुहोस् — उनले accept गर्नुपर्छ।",c:"thappad"},
+{t:"{PLAYER} ले {PLAYER2} को निधारमा gentle flick गर्नुहोस् — thumb र middle finger प्रयोग गरेर।",c:"thappad"},
+{t:"{PLAYER} लाई rock-paper-scissors खेल्न लगाउनुहोस् — हार्नेले winner को हातमा gentle थप्पड खान्छ।",c:"thappad"},
+{t:"{PLAYER} को ढाडमा gentle थाप मार्नुहोस् र 'Goodnews!' भन्नुहोस्।",c:"thappad"},
+{t:"{PLAYER} ले {PLAYER2} लाई pillow fight को एउटा blow दिन्छ।",c:"thappad"},
+{t:"सबैले {PLAYER} को हात एकपटक gentle थिच्नुहोस् — greeting style।",c:"thappad"},
+{t:"{PLAYER} र {PLAYER2} को बीचमा arm wrestling — हार्नेले जित्नेको पिठ्यूँमा gentle थाप मार्छ।",c:"thappad"},
+{t:"{PLAYER} ले आँखा बन्द गर्नुहोस् — {PLAYER2} ले nose gentle tap गर्नेछ।",c:"thappad"},
+{t:"सबैले एक पटक {PLAYER} को काँधमा tap गर्नुहोस् — solidarity tap।",c:"thappad"},
+{t:"{PLAYER} र {PLAYER2} पीठ जोडेर बस्नुहोस् — अनि एकसाथ उठ्ने कोशिस गर्नुहोस्।",c:"thappad"},
+/* ---- Creative ---- */
+{t:"३० सेकेन्डमा {PLAYER} को portrait बायाँ हातले बनाउनुहोस्।",c:"creative"},
+{t:"नया dance move बनाउनुहोस्, नाम दिनुहोस् र सबैलाई सिकाउनुहोस्।",c:"creative"},
+{t:"कोठामा भएको सबैभन्दा boring चिजबारे haiku सुनाउनुहोस् — drama सहित।",c:"creative"},
+{t:"{PLAYER} बारे ४ line को rap बनाउनुहोस् र perform गर्नुहोस्।",c:"creative"},
+{t:"आफ्नो superhero identity बनाउनुहोस् — power, weakness र origin story।",c:"creative"},
+{t:"कोठामा भएको चिजको advertisement बनाएर ३० सेकेन्डमा बेच्ने कोशिस गर्नुहोस्।",c:"creative"},
+{t:"नया word बनाउनुहोस्, define गर्नुहोस् र ३ वाक्यमा प्रयोग गर्नुहोस्।",c:"creative"},
+{t:"{PLAYER} संग नया ১০-step handshake बनाउनुहोस् र perform गर्नुहोस्।",c:"creative"},
+{t:"आफ्नो dream house describe गर्नुहोस् — केवल खाना को adjectives प्रयोग गरेर।",c:"creative"},
+{t:"कुनै Nepali film को scene act out गर्नुहोस् — sound effects मात्र प्रयोग गरेर।",c:"creative"},
+{t:"६० सेकेन्डमा stand-up comedy set perform गर्नुहोस् — आजको कुनै incident बारे।",c:"creative"},
+{t:"नया national holiday बनाउनुहोस् — कहिले, के गर्ने, के खाने।",c:"creative"},
+{t:"{PLAYER} को जीवनीको trailer बनाउनुहोस् — ३० सेकेन्डमा।",c:"creative"},
+{t:"कोठाका सबैलाई Avengers को role दिनुहोस् र कारण explain गर्नुहोस्।",c:"creative"},
+{t:"Nepali lok song को tune मा आजको घटना गाउनुहोस्।",c:"creative"},
+/* ---- Challenge ---- */
+{t:"२० jumping jacks गर्नुहोस् — {PLAYER} ले गन्दछ।",c:"challenge"},
+{t:"४५ सेकेन्ड plank hold गर्नुहोस् — कसैले question सोध्दै जान्छ।",c:"challenge"},
+{t:"१० push-ups गर्नुहोस् — आफ्नो motivational commentary सहित।",c:"challenge"},
+{t:"१० पटक घुम्नुहोस् र सीधा हिँड्ने कोशिस गर्नुहोस्।",c:"challenge"},
+{t:"Alphabet उल्टो सुनाउनुहोस् — fail भए फेरि try।",c:"challenge"},
+{t:"{PLAYER} संग १ मिनेट आँखा नझिम्काई staring contest गर्नुहोस्।",c:"challenge"},
+{t:"आफ्नो नाम पानीमा उँगलीले लेख्नुहोस् — air मा imagine गरेर।",c:"challenge"},
+{t:"सबैभन्दा तेज जिब्रो टिस्टर 'Kalo Kaka Kalo Kaag' ५ पटक भन्नुहोस्।",c:"challenge"},
+{t:"एक खुट्टामा उभिएर {PLAYER} ले कुनै question सोध्दा जवाफ दिनुहोस्।",c:"challenge"},
+{t:"बायाँ हातले आफ्नो नाम नेपालीमा लेख्नुहोस्।",c:"challenge"},
+{t:"{PLAYER} को instruction मान्दै ३ मिनेट exercise गर्नुहोस्।",c:"challenge"},
+{t:"जोरले आफ्नो नाम ३ पटक बाहिर गएर भन्नुहोस् र फर्कनुहोस्।",c:"challenge"},
+{t:"सबैभन्दा कम समयमा ५ celebrity को नाम लिनुहोस्।",c:"challenge"},
+{t:"{PLAYER} ले दिएको random ३ चिज juggle गर्ने कोशिस गर्नुहोस्।",c:"challenge"},
+{t:"1 मिनेट lisp गरेर कुरा गर्नुहोस्।",c:"challenge"},
+{t:"Moon walk गर्दै कोठाको एक छेउबाट अर्को छेउसम्म जानुहोस्।",c:"challenge"},
+{t:"पानी नखाई १ मिनेट spicy खाना खाने कोशिस गर्नुहोस्।",c:"challenge"},
+{t:"blind fold गरेर {PLAYER} ले दिएको mystery खाना खानुहोस्।",c:"challenge"},
+{t:"आफ्नो जुत्ता नखोली एक खुट्टाले stand गर्नुहोस् ३० सेकेन्ड।",c:"challenge"},
+{t:"{PLAYER} को साथ thumb war खेल्नुहोस् — best of 3।",c:"challenge"},
+/* ---- थप मजेदार ---- */
+{t:"अर्को round सम्म whisper मा मात्र कुरा गर्नुहोस्।",c:"funny"},
+{t:"सबैको सामु आफ्नो best talent देखाउनुहोस् — जे भए पनि।",c:"funny"},
+{t:"{PLAYER} को footstep copy गर्दै उनको पछाडि हिँड्नुहोस् ३ मिनेट।",c:"funny"},
+{t:"आफ्नो जुत्ता खोलेर headphone बनाएको जस्तो गर्नुहोस्।",c:"funny"},
+{t:"कोठामा भएको सबैभन्दा heavy चिज उचाल्ने कोशिस गर्नुहोस् — face expression सहित।",c:"funny"},
+{t:"Bollywood style मा dramatic entry गर्नुहोस् कोठामा।",c:"funny"},
+{t:"आफ्नो सबैभन्दा नराम्रो singing आवाज देखाउनुहोस्।",c:"funny"},
+{t:"{PLAYER} को best friend को role play गर्नुहोस् ५ मिनेट।",c:"funny"},
+{t:"एकै साथ पाँच वटा भिन्न emotion face बनाउनुहोस् — sequence मा।",c:"funny"},
+{t:"Gandhi ji को style मा भाषण दिनुहोस् — topic: Momo।",c:"funny"},
+{t:"आफ्नो हातलाई puppet बनाएर conversation गराउनुहोस् ३० सेकेन्ड।",c:"funny"},
+{t:"{PLAYER} लाई गाएर आफ्नो दिनको कहानी सुनाउनुहोस्।",c:"funny"},
+{t:"विना हाँस्नु बिना ३० सेकेन्ड serious अनुहार राख्नुहोस् — सबैले हँसाउने कोशिस गर्छन्।",c:"funny"},
+{t:"आफ्नो room describe गर्नुहोस् — junk food को adjectives प्रयोग गरेर।",c:"funny"},
+{t:"{PLAYER} लाई आफ्नो long-lost twin भनेर introduce गर्नुहोस्।",c:"funny"},
+/* ---- थप Challenges ---- */
+{t:"{PLAYER} र {PLAYER2} मिलेर trust fall गर्नुहोस्।",c:"challenge"},
+{t:"पूरो group मा सबैले एउटा animal बनेर ५ मिनेट play गर्नुहोस्।",c:"challenge"},
+{t:"{PLAYER} ले दिएको tune hum गर्नुहोस् — अरूले guess गर्छन्।",c:"challenge"},
+{t:"आफ्नो नाम breathe बिना ५ पटक भन्न कोशिस गर्नुहोस्।",c:"challenge"},
+{t:"१ मिनेट बिना stop गरे कुनै पनि topic मा freely बोल्नुहोस्।",c:"challenge"},
+{t:"{PLAYER} ले जे instruction दिन्छ त्यो सबै ३ मिनेट गर्नुहोस्।",c:"challenge"},
+{t:"आँखा बन्द गरेर {PLAYER} को अनुहार छुएर identify गर्नुहोस्।",c:"challenge"},
+{t:"एकसाथ काँधमा हात राखेर सबैले ५ पटक squat गर्नुहोस्।",c:"challenge"},
+{t:"{PLAYER} ले दिएको word बाट ३ मिनेट कुरा गर्नुहोस् — बिना रोकेर।",c:"challenge"},
+{t:"सबैले मिलेर ३० सेकेन्डमा एउटा human pyramid बनाउने कोशिस गर्नुहोस्।",c:"challenge"},
+/* ---- थप lalaj ---- */
+{t:"आफ्नो lock screen सबैलाई देखाउनुहोस्।",c:"lalaj"},
+{t:"आफ्नो contact list को १ नम्बर contact को नाम सुनाउनुहोस्।",c:"lalaj"},
+{t:"आफ्नो phone को most used app सुनाउनुहोस्।",c:"lalaj"},
+{t:"आफ्नो last YouTube search history सुनाउनुहोस्।",c:"lalaj"},
+{t:"{PLAYER} को phone मा आफ्नो contact नाम save गर्नुहोस् — creative नाम राखेर।",c:"lalaj"},
+{t:"आफ्नो सबैभन्दा लामो text conversation कसको हो — नाम सुनाउनुहोस्।",c:"lalaj"},
+{t:"आफ्नो ringtone बजाउनुहोस् सबैलाई सुनाउनुहोस्।",c:"lalaj"},
+{t:"आफ्नो gallery को first photo सबैलाई देखाउनुहोस्।",c:"lalaj"},
+{t:"{PLAYER} को नाम आफ्नो phone मा search गरेर result देखाउनुहोस्।",c:"lalaj"},
+{t:"आफ्नो bio/status सबैलाई पढेर सुनाउनुहोस् dramatic voice मा।",c:"lalaj"},
+/* ---- थप Thappad/Physical fun ---- */
+{t:"{PLAYER} ले {PLAYER2} को गालामा air kiss गर्नुहोस् — Bollywood style।",c:"thappad"},
+{t:"{PLAYER} र {PLAYER2} मिलेर Indian uncle-aunty style मा meet गर्नुहोस्।",c:"thappad"},
+{t:"सबैले {PLAYER} को निधारमा एकपटक gentle tap गर्नुहोस् — 'you're it' game।",c:"thappad"},
+{t:"{PLAYER} ले {PLAYER2} को हातमा ३ पटक gentle knock knock गर्नुहोस्।",c:"thappad"},
+{t:"सबैले {PLAYER} को खुट्टा gentle stamp गर्नुहोस् — एक पटक।",c:"thappad"},
+{t:"{PLAYER} र {PLAYER2} को बीचमा pillow battle — ३० सेकेन्ड।",c:"thappad"},
+{t:"{PLAYER} ले {PLAYER2} लाई blindfold गरेर nose टिच्नुहोस्।",c:"thappad"},
+{t:"Slap-clap game: {PLAYER} र {PLAYER2} मिलेर एउटा rhythm बनाउनुहोस्।",c:"thappad"},
+/* ---- थप Creative ---- */
+{t:"कोठामा भएको object को बारेमा एउटा sad poem सुनाउनुहोस्।",c:"creative"},
+{t:"भविष्यमा Nepal कस्तो हुन्छ भनेर ३० सेकेन्डमा predict गर्नुहोस्।",c:"creative"},
+{t:"आफ्नो नामको acronym बनाउनुहोस् — funny meaning सहित।",c:"creative"},
+{t:"कोठाभित्रको कुनै चिज बेच्ने commercial बनाउनुहोस् ३० सेकेन्डमा।",c:"creative"},
+{t:"{PLAYER} को अनुहारलाई emoji sequence बाट describe गर्नुहोस्।",c:"creative"},
+{t:"Nepal को next big startup idea pitch गर्नुहोस् — serious भएर।",c:"creative"},
+{t:"{PLAYER} बारे एउटा short story सुनाउनुहोस् — happy ending सहित।",c:"creative"},
+{t:"आफ्नो dream job को interview scene act out गर्नुहोस्।",c:"creative"},
+{t:"सबैलाई एउटा magic trick देखाउनुहोस् — real वा fake।",c:"creative"},
+{t:"Nepali lok dohari style मा {PLAYER} संग rap battle गर्नुहोस्।",c:"creative"},
+/* ---- थप Funny ---- */
+{t:"अर्को ३ rounds सम्म lisp गरेर बोल्नुहोस्।",c:"funny"},
+{t:"सबैको सामु आफ्नो best moonwalk देखाउनुहोस्।",c:"funny"},
+{t:"आफ्नो सबैभन्दा नराम्रो accent मा नेपाली बोल्नुहोस् ३० सेकेन्ड।",c:"funny"},
+{t:"कुनै politician को नक्कल उतार्नुहोस् — भाषण सहित।",c:"funny"},
+{t:"{PLAYER} लाई आफ्नो sidekick declare गर्नुहोस् र mission explain गर्नुहोस्।",c:"funny"},
+{t:"आफ्नो हात बिना कुनै खाना खाने कोशिस गर्नुहोस्।",c:"funny"},
+{t:"एउटा sad song को tune मा मोज्जा खाएको describe गर्नुहोस्।",c:"funny"},
+{t:"{PLAYER} को जुत्ता लगाएर ३ rounds गर्नुहोस् — match भए नहोस्।",c:"funny"},
+{t:"कुनै animal जस्तो गरेर खाना खाने नाटक गर्नुहोस्।",c:"funny"},
+{t:"सबैको सामु आफ्नो most embarrassing selfie face देखाउनुहोस्।",c:"funny"},
+];
+
+/* =====================================================
+   SHUFFLE SYSTEM — Fisher-Yates, no repeat tracking
+   ===================================================== */
+let truthPool = [];   // indices remaining
+let darePool  = [];   // indices remaining
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function refillTruths() {
+  truthPool = shuffleArray(TRUTHS_RAW.map((_,i)=>i));
+}
+function refillDares() {
+  darePool = shuffleArray(DARES_RAW.map((_,i)=>i));
+}
+
+function getNextTruth() {
+  if (truthPool.length === 0) refillTruths();
+  return truthPool.pop();
+}
+function getNextDare() {
+  if (darePool.length === 0) refillDares();
+  return darePool.pop();
+}
+
+// Replace {PLAYER} and {PLAYER2} with random player names
+function resolveDareText(raw) {
+  const curr = G.players[G.currentPlayerIdx];
+  const others = G.players.filter((_,i)=>i!==G.currentPlayerIdx);
+  if (!others.length) return raw.replace(/\{PLAYER2?\}/g, curr.name);
+  const rnd1 = others[Math.floor(Math.random()*others.length)];
+  const rnd2 = others.filter(p=>p!==rnd1)[Math.floor(Math.random()*Math.max(1,others.filter(p=>p!==rnd1).length))] || rnd1;
+  return raw.replace(/\{PLAYER\}/g, rnd1.name).replace(/\{PLAYER2\}/g, rnd2.name);
+}
+
+/* =====================================================
+   GAME STATE
+   ===================================================== */
+const G = {
+  players:[], round:1, currentPlayerIdx:-1,
+  dareCount:0, qCount:0, history:[],
+  votes:{}, detResult:null, forcedDare:false,
+  camActive:false, camStream:null, ecgAnim:null,
+  spinAngle:0, spinning:false, currentDare:null, currentQuestion:'',
+};
+
+/* =====================================================
+   AUDIO ENGINE
+   ===================================================== */
+let _ac=null;
+const ac=()=>{if(!_ac)_ac=new(window.AudioContext||window.webkitAudioContext)();return _ac;};
+const sfx={
+  click(){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.value=900;g.gain.setValueAtTime(.12,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.09);o.start();o.stop(c.currentTime+.1);}catch(e){}},
+  spin(){try{const c=ac();[300,350,400,450,500,460,420,380].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='triangle';o.frequency.value=f;const t=c.currentTime+i*.08;g.gain.setValueAtTime(.08,t);g.gain.exponentialRampToValueAtTime(.001,t+.09);o.start(t);o.stop(t+.1);});}catch(e){}},
+  suspense(){try{const c=ac();[220,196,174,165,155,146,138,130].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sawtooth';o.frequency.value=f;const t=c.currentTime+i*.36;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.065,t+.1);g.gain.exponentialRampToValueAtTime(.001,t+.36);o.start(t);o.stop(t+.4);});}catch(e){}},
+  success(){try{const c=ac();[523,659,784,1047].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.value=f;const t=c.currentTime+i*.13;g.gain.setValueAtTime(.11,t);g.gain.exponentialRampToValueAtTime(.001,t+.28);o.start(t);o.stop(t+.3);});}catch(e){}},
+  danger(){try{const c=ac();[220,207,195,184].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='square';o.frequency.value=f;const t=c.currentTime+i*.19;g.gain.setValueAtTime(.09,t);g.gain.exponentialRampToValueAtTime(.001,t+.22);o.start(t);o.stop(t+.25);});}catch(e){}},
+  win(){try{const c=ac();[523,659,784,1047,1319].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.value=f;const t=c.currentTime+i*.15;g.gain.setValueAtTime(.13,t);g.gain.exponentialRampToValueAtTime(.001,t+.45);o.start(t);o.stop(t+.5);});}catch(e){}},
+};
+const vibe=p=>{try{navigator.vibrate&&navigator.vibrate(p);}catch(e){}};
+
+/* =====================================================
+   PARTICLES
+   ===================================================== */
+const bgC=document.getElementById('bg-canvas'),bgX=bgC.getContext('2d');
+let pts=[];
+function resizeBg(){bgC.width=window.innerWidth;bgC.height=window.innerHeight;}
+function initPts(){pts=[];const n=Math.min(55,Math.floor(bgC.width*bgC.height/14000));for(let i=0;i<n;i++)pts.push({x:Math.random()*bgC.width,y:Math.random()*bgC.height,vx:(Math.random()-.5)*.38,vy:(Math.random()-.5)*.38,r:Math.random()*1.4+.5,a:Math.random()*.45+.1,col:Math.random()>.5?'0,240,255':'0,255,157'});}
+function animPts(){bgX.clearRect(0,0,bgC.width,bgC.height);pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=bgC.width;if(p.x>bgC.width)p.x=0;if(p.y<0)p.y=bgC.height;if(p.y>bgC.height)p.y=0;bgX.beginPath();bgX.arc(p.x,p.y,p.r,0,Math.PI*2);bgX.fillStyle=`rgba(${p.col},${p.a})`;bgX.fill();});pts.forEach((a,i)=>pts.slice(i+1).forEach(b=>{const d=Math.hypot(a.x-b.x,a.y-b.y);if(d<95){bgX.beginPath();bgX.moveTo(a.x,a.y);bgX.lineTo(b.x,b.y);bgX.strokeStyle=`rgba(0,240,255,${.055*(1-d/95)})`;bgX.lineWidth=.5;bgX.stroke();}}));requestAnimationFrame(animPts);}
+resizeBg();initPts();animPts();
+window.addEventListener('resize',()=>{resizeBg();initPts();});
+
+/* =====================================================
+   SCREEN MANAGEMENT
+   ===================================================== */
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+
+/* =====================================================
+   TOAST
+   ===================================================== */
+let _tt;
+function toast(msg,dur=2600){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),dur);}
+
+/* =====================================================
+   RIPPLE
+   ===================================================== */
+document.addEventListener('click',e=>{const b=e.target.closest('.btn');if(!b)return;const r=document.createElement('span');const rc=b.getBoundingClientRect();r.style.cssText=`position:absolute;border-radius:50%;background:rgba(255,255,255,.12);width:110px;height:110px;pointer-events:none;z-index:0;left:${e.clientX-rc.left-55}px;top:${e.clientY-rc.top-55}px;animation:rpl .5s ease-out forwards;`;b.style.position='relative';b.appendChild(r);setTimeout(()=>r.remove(),500);});
+
+/* =====================================================
+   INTRO → SETUP
+   ===================================================== */
+window.addEventListener('load',()=>{
+  show('s-intro');
+  refillTruths(); refillDares();
+  loadSavedScores();
+  setTimeout(()=>{
+    const s=document.getElementById('s-intro');
+    s.style.transition='opacity .8s ease';s.style.opacity='0';
+    setTimeout(()=>show('s-setup'),800);
+  },3200);
+});
+
+/* =====================================================
+   SAVED SCORES
+   ===================================================== */
+function loadSavedScores(){
+  try{
+    const d=JSON.parse(localStorage.getItem('tod_np_scores')||'null');
+    if(!d||!d.length)return;
+    const card=document.getElementById('saved-scores-card');
+    const list=document.getElementById('saved-scores-list');
+    card.style.display='block';
+    list.innerHTML=d.map(p=>`<div class="sb-chip"><div class="sb-chip-dot" style="background:${p.color||'#00f0ff'}"></div>${p.name}<span class="sb-chip-score">${p.score}pt</span></div>`).join('');
+  }catch(e){}
+}
+function saveScores(){try{localStorage.setItem('tod_np_scores',JSON.stringify(G.players.map(p=>({name:p.name,color:p.color,score:p.score}))));}catch(e){}}
+function clearSavedScores(){localStorage.removeItem('tod_np_scores');document.getElementById('saved-scores-card').style.display='none';toast('💾 History मेटाइयो!');}
+
+/* =====================================================
+   PLAYER SETUP
+   ===================================================== */
+document.getElementById('inp-pname').addEventListener('keypress',e=>{if(e.key==='Enter')addPlayer();});
+
+function addPlayer(){
+  sfx.click();
+  const inp=document.getElementById('inp-pname');
+  const name=inp.value.trim().slice(0,16);
+  if(!name){toast('नाम लेख्नुहोस्! 👤');return;}
+  if(G.players.length>=10){toast('अधिकतम १० खेलाडी मात्र!');return;}
+  if(G.players.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast('यो नाम पहिले नै छ!');return;}
+  G.players.push({name,color:PLAYER_COLORS[G.players.length%PLAYER_COLORS.length],score:0,truths:0,dares:0});
+  inp.value='';renderPlayersList();vibe(30);
+}
+
+function removePlayer(i){sfx.click();G.players.splice(i,1);G.players.forEach((p,j)=>p.color=PLAYER_COLORS[j%PLAYER_COLORS.length]);renderPlayersList();}
+
+function editPlayer(i){
+  const n=prompt('नाम सम्पादन गर्नुहोस्:',G.players[i].name);
+  if(!n||!n.trim())return;
+  G.players[i].name=n.trim().slice(0,16);renderPlayersList();
+}
+
+function renderPlayersList(){
+  document.getElementById('players-list').innerHTML=G.players.map((p,i)=>`
+    <div class="player-item" style="animation-delay:${i*.05}s">
+      <div class="player-color" style="background:${p.color};box-shadow:0 0 8px ${p.color}55"></div>
+      <span class="player-item-name">${i+1}. ${p.name}</span>
+      <button class="player-item-edit" onclick="editPlayer(${i})">EDIT</button>
+      <button class="player-item-del" onclick="removePlayer(${i})">✕</button>
+    </div>`).join('');
+  document.getElementById('p-count-badge').textContent=`${G.players.length} / 10 खेलाडी थपियो`;
+  document.getElementById('start-btn').disabled=G.players.length<2;
+}
+
+function startGame(){
+  sfx.click();vibe([40,30,40]);
+  G.round=1;G.dareCount=0;G.qCount=0;G.history=[];G.votes={};
+  G.players.forEach(p=>{p.score=0;p.truths=0;p.dares=0;});
+  refillTruths();refillDares();
+  show('s-wheel');renderScoreboardMini();renderHistory();drawWheel();
+  toast(`खेल सुरु! ${G.players.length} खेलाडी 🎉`);
+}
+
+/* =====================================================
+   WHEEL
+   ===================================================== */
+const WC=document.getElementById('wheel-canvas'),WX=WC.getContext('2d');
+
+function drawWheel(hlIdx=-1){
+  const size=Math.min(window.innerWidth*.76,320);
+  WC.width=WC.height=size;
+  const cx=size/2,cy=size/2,r=size/2-4,n=G.players.length;
+  if(!n)return;
+  const arc=Math.PI*2/n;
+  G.players.forEach((p,i)=>{
+    const s=G.spinAngle+i*arc-Math.PI/2,e=s+arc;
+    const hl=i===hlIdx;
+    WX.beginPath();WX.moveTo(cx,cy);WX.arc(cx,cy,r,s,e);WX.closePath();
+    WX.fillStyle=`${p.color}${Math.round((hl?.22:.12)*255).toString(16).padStart(2,'0')}`;WX.fill();
+    WX.strokeStyle=hl?p.color:`${p.color}66`;WX.lineWidth=hl?2.5:1.5;WX.stroke();
+    const ma=s+arc/2,tx=cx+Math.cos(ma)*r*.64,ty=cy+Math.sin(ma)*r*.64;
+    WX.save();WX.translate(tx,ty);WX.rotate(ma+Math.PI/2);
+    WX.fillStyle=hl?p.color:`${p.color}cc`;
+    if(hl){WX.shadowColor=p.color;WX.shadowBlur=12;}
+    const fs=Math.max(8,Math.min(13,size/n/2.8));
+    WX.font=`700 ${fs}px Orbitron,monospace`;WX.textAlign='center';
+    const nm=p.name.length>8?p.name.slice(0,7)+'…':p.name;
+    WX.fillText(nm,0,0);WX.restore();
+  });
+  WX.beginPath();WX.arc(cx,cy,size*.1,0,Math.PI*2);WX.fillStyle='#03070f';WX.fill();
+  WX.strokeStyle='rgba(0,240,255,.3)';WX.lineWidth=1.5;WX.stroke();
+  WX.fillStyle='rgba(0,240,255,.6)';WX.font=`600 ${Math.max(8,size*.038)}px Orbitron,monospace`;
+  WX.textAlign='center';WX.textBaseline='middle';WX.fillText('SPIN',cx,cy);WX.textBaseline='alphabetic';
+  WX.beginPath();WX.arc(cx,cy,r,0,Math.PI*2);WX.strokeStyle='rgba(0,240,255,.15)';WX.lineWidth=3;WX.stroke();
+}
+
+function spinWheel(){
+  if(G.spinning||!G.players.length)return;
+  sfx.spin();vibe([40,60,40]);G.spinning=true;
+  const tot=(Math.PI*2)*8+Math.random()*Math.PI*2,dur=3200,start=performance.now(),sa=G.spinAngle;
+  const ease=t=>1-Math.pow(1-t,4);
+  function frame(now){
+    const p=Math.min((now-start)/dur,1);
+    G.spinAngle=sa+tot*ease(p);drawWheel();
+    if(p<1){requestAnimationFrame(frame);return;}
+    G.spinning=false;
+    const arc=Math.PI*2/G.players.length;
+    const a=((-G.spinAngle%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+    const idx=Math.floor(a/arc)%G.players.length;
+    const winner=(G.players.length-1-idx+G.players.length)%G.players.length;
+    drawWheel(winner);
+    setTimeout(()=>selectPlayer(winner),400);
+  }
+  requestAnimationFrame(frame);
+}
+
+function selectPlayer(idx){
+  sfx.success();vibe([50,40,100]);
+  G.currentPlayerIdx=idx;
+  const p=G.players[idx];
+  toast(`🎯 ${p.name} को पालो!`,2000);
+  const mode=Math.random()<.5?'truth':'dare';
+  document.getElementById('round-banner').textContent=`राउन्ड ${G.round}`;
+  setTimeout(()=>{if(mode==='truth')showTruth();else showDare(false);},1200);
+}
+
+/* =====================================================
+   SCOREBOARD
+   ===================================================== */
+function renderScoreboardMini(){
+  document.getElementById('scoreboard-mini').innerHTML=G.players.map(p=>`
+    <div class="sb-chip">
+      <div class="sb-chip-dot" style="background:${p.color};box-shadow:0 0 6px ${p.color}66"></div>
+      ${p.name.length>8?p.name.slice(0,7)+'…':p.name}
+      <span class="sb-chip-score">${p.score}</span>
+    </div>`).join('');
+}
+
+/* =====================================================
+   HISTORY
+   ===================================================== */
+function addHistory(player,type,text,result){
+  G.history.unshift({player,type,text,result});
+  if(G.history.length>5)G.history.pop();
+}
+function renderHistory(){
+  const list=document.getElementById('history-list'),panel=document.getElementById('history-panel');
+  if(!G.history.length){panel.style.display='none';return;}
+  panel.style.display='block';
+  list.innerHTML=G.history.map(h=>`
+    <div class="h-item">
+      <span class="h-badge ${h.type}">${h.type.toUpperCase()}</span>
+      <span class="h-name">${h.player}</span>
+      <span class="h-text">${h.text.slice(0,40)}${h.text.length>40?'…':''}</span>
+      <span class="h-res">${h.result?'✅':'❌'}</span>
+    </div>`).join('');
+}
+
+/* =====================================================
+   TRUTH FLOW
+   ===================================================== */
+function showTruth(){
+  const p=G.players[G.currentPlayerIdx];
+  G.qCount++;
+  const qIdx=getNextTruth();
+  const q=TRUTHS_RAW[qIdx];
+  G.currentQuestion=q;
+  document.getElementById('q-num').textContent=`प्रश्न #${String(qIdx+1).padStart(3,'0')}`;
+  document.getElementById('q-text').textContent=q;
+  document.getElementById('truth-player-name').textContent=p.name;
+  document.getElementById('truth-player-dot').style.cssText=`background:${p.color};box-shadow:0 0 8px ${p.color}`;
+  resetVote('custom-q');
+  document.getElementById('custom-q-input-row').style.display='none';
+  show('s-truth');
+}
+
+function startLieDetector(){
+  sfx.suspense();vibe([50,100,50]);
+  const p=G.players[G.currentPlayerIdx];
+  document.getElementById('det-player-name').textContent=p.name;
+  document.getElementById('det-player-dot').style.cssText=`background:${p.color};box-shadow:0 0 8px ${p.color}`;
+  document.getElementById('lie-alert').classList.remove('show');
+  document.getElementById('det-result').style.display='none';
+  document.getElementById('det-next-btn').style.display='none';
+  [1,2,3,4,5].forEach(n=>document.getElementById(`ds${n}`).classList.remove('on','done'));
+  const sb=document.getElementById('sb-fill');sb.classList.remove('go');void sb.offsetWidth;sb.classList.add('go');
+  show('s-detector');startECG();runDetection();
+}
+
+function runDetection(){
+  const steps=document.querySelectorAll('.det-step');
+  steps.forEach(s=>s.classList.remove('on','done'));
+  [350,800,1350,1900,2450].forEach((t,i)=>{
+    setTimeout(()=>{
+      steps.forEach((s,j)=>{if(j<i)s.classList.add('done');else s.classList.remove('done');});
+      document.getElementById(`ds${i+1}`).classList.add('on');
+    },t);
+  });
+  setTimeout(()=>{
+    stopECG();
+    steps.forEach(s=>{s.classList.remove('on');s.classList.add('done');});
+    const isLie=Math.random()<.45;
+    G.detResult=isLie?'lie':'truth';
+    const conf=(Math.floor(Math.random()*12)+87)+'.'+Math.floor(Math.random()*9)+'%';
+    const rd=document.getElementById('det-result');
+    rd.className='det-result '+(isLie?'lie':'truth');
+    document.getElementById('res-icon').textContent=isLie?'❌':'✅';
+    document.getElementById('res-text').textContent=isLie?'झूट पत्ता लाग्यो!':'सत्य पत्ता लाग्यो!';
+    document.getElementById('res-conf').textContent=`निश्चितता: ${conf}`;
+    rd.style.display='block';
+    document.getElementById('det-next-btn').style.display='flex';
+    if(isLie){sfx.danger();vibe([100,50,100,50,200]);}else{sfx.success();vibe([50,30,100]);}
+  },3100);
+}
+
+function handleDetResult(){
+  sfx.click();
+  if(G.detResult==='lie'){
+    G.forcedDare=true;
+    addHistory(G.players[G.currentPlayerIdx].name,'t',G.currentQuestion,false);
+    renderHistory();showDare(true);
+  } else {
+    G.forcedDare=false;
+    const p=G.players[G.currentPlayerIdx];
+    p.score+=1;p.truths++;
+    addHistory(p.name,'t',G.currentQuestion,true);
+    renderHistory();renderScoreboardMini();saveScores();
+    toast(`✅ ${p.name}: सत्य प्रमाणित! +१ point`);
+    setTimeout(goWheel,600);
+  }
+}
+
+/* =====================================================
+   ECG
+   ===================================================== */
+let ecgId=null;
+function startECG(){
+  const cv=document.getElementById('ecg-canvas'),ctx=cv.getContext('2d');
+  cv.width=cv.offsetWidth||300;cv.height=cv.offsetHeight||72;
+  const w=cv.width,h=cv.height;let off=0;
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    const grad=ctx.createLinearGradient(0,0,w,0);
+    grad.addColorStop(0,'transparent');grad.addColorStop(.25,'#00ff9d');grad.addColorStop(1,'#00ff9d');
+    ctx.strokeStyle=grad;ctx.lineWidth=2;ctx.shadowColor='#00ff9d';ctx.shadowBlur=8;
+    ctx.beginPath();
+    for(let x=0;x<w+5;x++){
+      const nx=(x+off)/w,cy2=h/2;let y=cy2;
+      const ph=(nx*8)%1;
+      if(ph<.04)y-=h*.08*(ph/.04);
+      else if(ph<.09)y-=h*.08*((.09-ph)/.05);
+      else if(ph<.13)y+=h*.04;
+      else if(ph<.18)y-=h*.55*((ph-.13)/.05);
+      else if(ph<.23)y-=h*.55*((.23-ph)/.05);
+      else if(ph<.28)y+=h*.28*((ph-.23)/.05);
+      else if(ph<.33)y+=h*.28*((.33-ph)/.05);
+      else if(ph<.43)y-=h*.12*Math.sin((ph-.33)/.1*Math.PI);
+      y=Math.min(Math.max(y,2),h-2);
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    off+=2.5;ecgId=requestAnimationFrame(draw);
+  }
+  if(ecgId)cancelAnimationFrame(ecgId);draw();
+}
+function stopECG(){if(ecgId){cancelAnimationFrame(ecgId);ecgId=null;}}
+
+/* =====================================================
+   DARE FLOW
+   ===================================================== */
+function showDare(forced){
+  G.forcedDare=forced;
+  G.dareCount++;
+  const dIdx=getNextDare();
+  const dare=DARES_RAW[dIdx];
+  G.currentDare={...dare,t:resolveDareText(dare.t),num:dIdx+1};
+  const p=G.players[G.currentPlayerIdx];
+  document.getElementById('dare-num').textContent=String(G.currentDare.num).padStart(3,'0');
+  document.getElementById('dare-text').textContent=G.currentDare.t;
+  const catEl=document.getElementById('d-cat');
+  const catLabels={funny:'मजेदार',lalaj:'लाजलाग्दो',samajik:'सामाजिक',thappad:'Physical Fun',creative:'Creative',challenge:'Challenge'};
+  catEl.textContent=catLabels[dare.c]||dare.c;catEl.className='d-cat '+dare.c;
+  document.getElementById('dare-player-name').textContent=p.name;
+  document.getElementById('dare-player-dot').style.cssText=`background:${p.color};box-shadow:0 0 8px ${p.color}`;
+  const la=document.getElementById('dare-lie-alert');
+  if(forced)la.classList.add('show');else la.classList.remove('show');
+  resetVote('dare-complete');resetVote('custom-dare');
+  document.getElementById('custom-dare-input-row').style.display='none';
+  show('s-dare');
+}
+
+function nextDare(){
+  sfx.click();vibe(30);
+  G.dareCount++;
+  const dIdx=getNextDare();
+  const dare=DARES_RAW[dIdx];
+  G.currentDare={...dare,t:resolveDareText(dare.t),num:dIdx+1};
+  const dc=document.querySelector('.d-card');
+  dc.style.opacity='0';dc.style.transform='scale(.94)';
+  setTimeout(()=>{
+    document.getElementById('dare-num').textContent=String(G.currentDare.num).padStart(3,'0');
+    document.getElementById('dare-text').textContent=G.currentDare.t;
+    const catEl=document.getElementById('d-cat');
+    const catLabels={funny:'मजेदार',lalaj:'लाजलाग्दो',samajik:'सामाजिक',thappad:'Physical Fun',creative:'Creative',challenge:'Challenge'};
+    catEl.textContent=catLabels[dare.c]||dare.c;catEl.className='d-cat '+dare.c;
+    dc.style.transition='all .35s cubic-bezier(.34,1.2,.64,1)';
+    dc.style.opacity='1';dc.style.transform='scale(1)';
+    setTimeout(()=>dc.style.transition='',350);
+    resetVote('dare-complete');
+  },200);
+}
+
+function completeDare(){
+  sfx.click();
+  const v=G.votes['dare-complete']||{yes:[],no:[]};
+  const total=G.players.length;
+  if(v.yes.length<total*.5&&total>1){toast('⚠️ पर्याप्त भोट छैन! ≥५०% हो चाहिन्छ');return;}
+  sfx.success();vibe([50,40,100,40,150]);
+  const p=G.players[G.currentPlayerIdx];
+  const pts=G.forcedDare?3:2;
+  p.score+=pts;p.dares++;
+  addHistory(p.name,'d',G.currentDare.t,true);
+  renderHistory();renderScoreboardMini();saveScores();
+  toast(`🔥 ${p.name}: Dare सकियो! +${pts} points`);
+  G.round++;setTimeout(goWheel,700);
+}
+
+/* =====================================================
+   CUSTOM Q/DARE
+   ===================================================== */
+function applyCustomQuestion(){const v=document.getElementById('inp-custom-q').value.trim();if(!v){toast('प्रश्न लेख्नुहोस्!');return;}document.getElementById('q-text').textContent=v;G.currentQuestion=v;document.getElementById('custom-q-input-row').style.display='none';toast('✅ Custom प्रश्न तयार!');}
+function applyCustomDare(){const v=document.getElementById('inp-custom-dare').value.trim();if(!v){toast('Dare लेख्नुहोस्!');return;}document.getElementById('dare-text').textContent=v;G.currentDare={t:v,c:'creative',num:0};document.getElementById('custom-dare-input-row').style.display='none';toast('✅ Custom Dare तयार!');}
+
+/* =====================================================
+   VOTING
+   ===================================================== */
+function resetVote(id){G.votes[id]={yes:[],no:[]};renderVote(id);}
+function castVote(id,choice){
+  sfx.click();
+  if(!G.votes[id])G.votes[id]={yes:[],no:[]};
+  const v=G.votes[id];
+  const all=[...v.yes,...v.no];
+  const tapIdx=all.length;
+  if(tapIdx>=G.players.length){toast('सबैले भोट गरिसक्यो!');return;}
+  if(choice==='yes')v.yes.push(tapIdx);else v.no.push(tapIdx);
+  renderVote(id);checkVoteResult(id);
+}
+function renderVote(id){
+  const v=G.votes[id]||{yes:[],no:[]};
+  const total=G.players.length;
+  const chips=document.getElementById(`${id}-votes`);
+  const bar=document.getElementById(`${id}-bar`);
+  const tally=document.getElementById(`${id}-tally`);
+  if(!chips)return;
+  chips.innerHTML=G.players.map((p,i)=>{
+    const isY=v.yes.includes(i),isN=v.no.includes(i);
+    return `<div class="vp-chip ${isY?'yes':isN?'no':''}"><div style="width:6px;height:6px;border-radius:50%;background:${p.color}"></div>${p.name.length>8?p.name.slice(0,7)+'…':p.name} ${isY?'👍':isN?'👎':'⏳'}</div>`;
+  }).join('');
+  const yc=v.yes.length,pct=total>0?Math.round(yc/total*100):0;
+  if(bar)bar.style.width=`${pct}%`;
+  if(tally)tally.textContent=`${yc} / ${total} ले हो भन्यो (${pct}%)`;
+}
+function checkVoteResult(id){
+  const v=G.votes[id]||{yes:[],no:[]};
+  const total=G.players.length,voted=v.yes.length+v.no.length;
+  if(voted<total)return;
+  const passed=v.yes.length>=total*.5;
+  if(id==='custom-q'){if(passed){document.getElementById('custom-q-input-row').style.display='flex';toast('✅ Custom प्रश्न approved!');}else toast('❌ Rejected। सामान्य खेल जारी।');}
+  if(id==='custom-dare'){if(passed){document.getElementById('custom-dare-input-row').style.display='flex';toast('✅ Custom Dare approved!');}else toast('❌ Rejected। सामान्य Dare जारी।');}
+}
+
+/* =====================================================
+   CAMERA
+   ===================================================== */
+async function toggleCamera(){
+  sfx.click();
+  const btn=document.getElementById('cam-toggle-btn'),wrap=document.getElementById('cam-preview-wrap');
+  if(G.camActive){
+    if(G.camStream)G.camStream.getTracks().forEach(t=>t.stop());
+    G.camStream=null;G.camActive=false;wrap.classList.remove('active');
+    btn.textContent='📷 Camera';toast('📷 Camera बन्द');
+  } else {
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+      G.camStream=stream;G.camActive=true;document.getElementById('cam-video').srcObject=stream;
+      wrap.classList.add('active');btn.textContent='📷 Camera बन्द गर्नुहोस्';
+      toast('📷 Camera खुल्यो — Face Detection सक्रिय!');
+    }catch(e){toast('⚠️ Camera अनुमति दिइएन');}
+  }
+}
+
+/* =====================================================
+   NAVIGATION
+   ===================================================== */
+function goWheel(){
+  sfx.click();
+  if(G.camActive){
+    document.getElementById('cam-preview-wrap').classList.remove('active');
+    if(G.camStream)G.camStream.getTracks().forEach(t=>t.stop());
+    G.camStream=null;G.camActive=false;
+    document.getElementById('cam-toggle-btn').textContent='📷 Camera';
+  }
+  renderScoreboardMini();renderHistory();drawWheel();show('s-wheel');shiftOrbs();
+}
+function showWheel(){sfx.click();goWheel();}
+function shiftOrbs(){
+  const cols=['#00f0ff','#00ff9d','#c944ff','#ffe033','#ff7c3a'];
+  const r=a=>a[Math.floor(Math.random()*a.length)];
+  document.getElementById('orb1').style.background=r(cols);
+  document.getElementById('orb2').style.background=r(cols);
+}
+
+/* =====================================================
+   END GAME
+   ===================================================== */
+function showEndGame(){
+  sfx.win();vibe([80,50,80,50,200]);
+  const sorted=[...G.players].sort((a,b)=>b.score-a.score);
+  const winner=sorted[0];
+  document.getElementById('winner-name').textContent=winner.name;
+  document.getElementById('winner-score').textContent=`${winner.score} points`;
+  const max=sorted[0].score||1;
+  document.getElementById('leaderboard').innerHTML=sorted.map((p,i)=>{
+    const rank=['🥇','🥈','🥉'][i]||`#${i+1}`;
+    const rc=['r1','r2','r3'][i]||'';
+    const bw=Math.round(p.score/max*100);
+    return `<div class="lb-row">
+      <div class="lb-rank ${rc}">${rank}</div>
+      <div class="lb-dot" style="background:${p.color};box-shadow:0 0 7px ${p.color}77"></div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span class="lb-name">${p.name}</span><span class="lb-pts">${p.score}pt</span>
+        </div>
+        <div class="lb-bar-wrap"><div class="lb-bar" style="width:${bw}%;animation-delay:${i*.1}s"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+  show('s-winner');
+}
+
+function newGame(){sfx.click();G.players=[];renderPlayersList();loadSavedScores();show('s-setup');}
+</script>
+</body>
+</html>
